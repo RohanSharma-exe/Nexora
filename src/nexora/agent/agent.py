@@ -105,6 +105,14 @@ class Agent:
 
         message = messages[0]
 
+        # Keep the message unread until the NPC can actually reply.
+        if not self.social.can_message(
+            self.npc.id,
+            message.sender_id,
+            current_tick,
+        ):
+            return None
+
         response = self.conversation_engine.respond(
             npc=self.npc,
             message=message,
@@ -124,19 +132,6 @@ class Agent:
             ),
             importance=response.importance,
         )
-
-        if not self.social.can_message(
-            self.npc.id,
-            message.sender_id,
-            current_tick,
-        ):
-            return ActionResult(
-                success=True,
-                description=(
-                    f"{self.npc.name} read a message from "
-                    f"{message.sender_id} but waited before replying."
-                ),
-            )
 
         executor = ActionExecutor(
             job_board=self.job_board,
