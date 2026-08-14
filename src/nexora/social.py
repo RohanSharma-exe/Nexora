@@ -69,9 +69,7 @@ class SocialSystem:
     ) -> bool:
         """Return whether a sender can message a recipient."""
 
-        last_tick = self.last_message_tick.get(
-            (sender_id, recipient_id)
-        )
+        last_tick = self.last_message_tick.get((sender_id, recipient_id))
 
         if last_tick is None:
             return True
@@ -99,9 +97,7 @@ class SocialSystem:
             recipient_id,
             tick,
         ):
-            raise ValueError(
-                f"Message cooldown active: {sender_id} -> {recipient_id}"
-            )
+            raise ValueError(f"Message cooldown active: {sender_id} -> {recipient_id}")
 
         message = ConversationMessage(
             id=self._next_message_id,
@@ -137,11 +133,7 @@ class SocialSystem:
         messages = self.inboxes.get(npc_id, [])
 
         if unprocessed_only:
-            return [
-                message
-                for message in messages
-                if not message.processed
-            ]
+            return [message for message in messages if not message.processed]
 
         return list(messages)
 
@@ -157,9 +149,7 @@ class SocialSystem:
                 message.processed = True
                 return message
 
-        raise KeyError(
-            f"Message {message_id} not found for {npc_id}"
-        )
+        raise KeyError(f"Message {message_id} not found for {npc_id}")
 
     def remember(
         self,
@@ -189,18 +179,10 @@ class SocialSystem:
     ) -> list[ConversationMemory]:
         """Retrieve conversational memories."""
 
-        memories = [
-            memory
-            for memory in self.memories
-            if memory.npc_id == npc_id
-        ]
+        memories = [memory for memory in self.memories if memory.npc_id == npc_id]
 
         if other_npc_id is not None:
-            memories = [
-                memory
-                for memory in memories
-                if memory.other_npc_id == other_npc_id
-            ]
+            memories = [memory for memory in memories if memory.other_npc_id == other_npc_id]
 
         return memories
 
@@ -231,19 +213,11 @@ class SocialSystem:
     def suggest_contact(self, npc_id: str) -> str | None:
         """Suggest another NPC to contact."""
 
-        candidates = sorted(
-            candidate
-            for candidate in self.inboxes
-            if candidate != npc_id
-        )
+        candidates = sorted(candidate for candidate in self.inboxes if candidate != npc_id)
 
         known = set(self.contacts(npc_id))
 
-        unknown = [
-            candidate
-            for candidate in candidates
-            if candidate not in known
-        ]
+        unknown = [candidate for candidate in candidates if candidate not in known]
 
         if unknown:
             return unknown[0]

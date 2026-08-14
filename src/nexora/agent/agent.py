@@ -44,16 +44,10 @@ class Agent:
     def observe(self) -> str:
         """Create a representation of the NPC's current state."""
 
-        goals = [
-            goal.description
-            for goal in self.npc.goals
-            if not goal.completed
-        ]
+        goals = [goal.description for goal in self.npc.goals if not goal.completed]
 
         jobs = [
-            job.title
-            for job in self.job_board.available()
-            if job.is_suitable_for(self.npc.skills)
+            job.title for job in self.job_board.available() if job.is_suitable_for(self.npc.skills)
         ]
 
         return (
@@ -81,10 +75,7 @@ class Agent:
     def _has_active_goal(self) -> bool:
         """Return whether the NPC has an incomplete goal."""
 
-        return any(
-            not goal.completed
-            for goal in self.npc.goals
-        )
+        return any(not goal.completed for goal in self.npc.goals)
 
     def process_message(
         self,
@@ -127,9 +118,7 @@ class Agent:
         self.social.remember(
             message=message,
             npc_id=self.npc.id,
-            summary=(
-                f"{message.sender_id} said: {message.content}"
-            ),
+            summary=(f"{message.sender_id} said: {message.content}"),
             importance=response.importance,
         )
 
@@ -189,8 +178,7 @@ class Agent:
             if goal.completed:
                 self.memory.add(
                     content=(
-                        f"Goal completed: {goal.description}. "
-                        f"Progress: ₹{goal.progress:.2f}."
+                        f"Goal completed: {goal.description}. Progress: ₹{goal.progress:.2f}."
                     ),
                     importance=1.0,
                 )

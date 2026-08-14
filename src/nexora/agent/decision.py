@@ -42,11 +42,7 @@ class DecisionEngine:
             social = SocialSystem()
             social.register_npc(npc.id)
 
-        incomplete_goals = [
-            goal
-            for goal in npc.goals
-            if not goal.completed
-        ]
+        incomplete_goals = [goal for goal in npc.goals if not goal.completed]
 
         contacts = social.contacts(npc.id)
         unread = social.unread_count(npc.id)
@@ -61,22 +57,15 @@ class DecisionEngine:
             if "earn" not in goal.description.lower():
                 return Decision(
                     action=ActionType.IDLE.value,
-                    reason=(
-                        f"No implemented strategy for '{goal.description}'."
-                    ),
+                    reason=(f"No implemented strategy for '{goal.description}'."),
                 )
 
             suitable_jobs = [
-                job
-                for job in job_board.available()
-                if job.is_suitable_for(npc.skills)
+                job for job in job_board.available() if job.is_suitable_for(npc.skills)
             ]
 
             if suitable_jobs:
-                maximum_payment = max(
-                    job.payment
-                    for job in suitable_jobs
-                )
+                maximum_payment = max(job.payment for job in suitable_jobs)
 
                 scores = [
                     self.scorer.score_job(
@@ -132,13 +121,11 @@ class DecisionEngine:
                         action=ActionType.SEND_MESSAGE.value,
                         target_id=contact,
                         content=(
-                            "I couldn't find suitable work. "
-                            "Do you know of anything available?"
+                            "I couldn't find suitable work. Do you know of anything available?"
                         ),
                         intent=MessageIntent.REQUEST,
                         reason=(
-                            "No suitable jobs are available, so the NPC "
-                            "seeks help from a contact."
+                            "No suitable jobs are available, so the NPC seeks help from a contact."
                         ),
                         score=0.6,
                     )
@@ -154,25 +141,17 @@ class DecisionEngine:
 
             social_score = npc.personality.sociability * 0.75
 
-            if (
-                social_score >= 0.45
-                and social.can_message(
-                    npc.id,
-                    contact,
-                    current_tick,
-                )
+            if social_score >= 0.45 and social.can_message(
+                npc.id,
+                contact,
+                current_tick,
             ):
                 return Decision(
                     action=ActionType.SEND_MESSAGE.value,
                     target_id=contact,
-                    content=(
-                        f"Hey, {contact}. How are things going?"
-                    ),
+                    content=(f"Hey, {contact}. How are things going?"),
                     intent=MessageIntent.GREETING,
-                    reason=(
-                        f"{npc.name}'s sociability motivates "
-                        "social interaction."
-                    ),
+                    reason=(f"{npc.name}'s sociability motivates social interaction."),
                     score=social_score,
                 )
 
@@ -187,14 +166,9 @@ class DecisionEngine:
                 return Decision(
                     action=ActionType.SEND_MESSAGE.value,
                     target_id=contact,
-                    content=(
-                        f"Hey {contact}, what are you working on?"
-                    ),
+                    content=(f"Hey {contact}, what are you working on?"),
                     intent=MessageIntent.QUESTION,
-                    reason=(
-                        f"{npc.name} has no active goals "
-                        "and chooses to socialize."
-                    ),
+                    reason=(f"{npc.name} has no active goals and chooses to socialize."),
                     score=npc.personality.sociability,
                 )
 
