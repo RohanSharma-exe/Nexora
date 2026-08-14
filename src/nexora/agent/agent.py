@@ -44,10 +44,16 @@ class Agent:
     def observe(self) -> str:
         """Create a representation of the NPC's current state."""
 
-        goals = [goal.description for goal in self.npc.goals if not goal.completed]
+        goals = [
+            goal.description
+            for goal in self.npc.goals
+            if not goal.completed
+        ]
 
         jobs = [
-            job.title for job in self.job_board.available() if job.is_suitable_for(self.npc.skills)
+            job.title
+            for job in self.job_board.available()
+            if job.is_suitable_for(self.npc.skills)
         ]
 
         return (
@@ -62,19 +68,23 @@ class Agent:
             f"Unread messages: {self.social.unread_count(self.npc.id)}"
         )
 
-    def decide(self) -> Decision:
+    def decide(self, current_tick: int = 0) -> Decision:
         """Choose the next action."""
 
         return self.decision_engine.decide(
             self.npc,
             self.job_board,
             self.social,
+            current_tick=current_tick,
         )
 
     def _has_active_goal(self) -> bool:
         """Return whether the NPC has an incomplete goal."""
 
-        return any(not goal.completed for goal in self.npc.goals)
+        return any(
+            not goal.completed
+            for goal in self.npc.goals
+        )
 
     def process_message(
         self,
@@ -109,9 +119,24 @@ class Agent:
         self.social.remember(
             message=message,
             npc_id=self.npc.id,
-            summary=(f"{message.sender_id} said: {message.content}"),
+            summary=(
+                f"{message.sender_id} said: {message.content}"
+            ),
             importance=response.importance,
         )
+
+        if not self.social.can_message(
+            self.npc.id,
+            message.sender_id,
+            current_tick,
+        ):
+            return ActionResult(
+                success=True,
+                description=(
+                    f"{self.npc.name} read a message from "
+                    f"{message.sender_id} but waited before replying."
+                ),
+            )
 
         executor = ActionExecutor(
             job_board=self.job_board,
@@ -169,7 +194,8 @@ class Agent:
             if goal.completed:
                 self.memory.add(
                     content=(
-                        f"Goal completed: {goal.description}. Progress: ₹{goal.progress:.2f}."
+                        f"Goal completed: {goal.description}. "
+                        f"Progress: ₹{goal.progress:.2f}."
                     ),
                     importance=1.0,
                 )
@@ -184,7 +210,7 @@ class Agent:
         if incoming is not None:
             decision = Decision(
                 action=ActionType.SEND_MESSAGE.value,
-                reason="Responded to an incoming message.",
+                reason="Processed an incoming message.",
             )
 
             return AgentResult(
@@ -195,7 +221,9 @@ class Agent:
 
         self.observe()
 
-        decision = self.decide()
+        decision = self.decide(
+            current_tick=current_tick,
+        )
 
         result = self.act(
             decision,
