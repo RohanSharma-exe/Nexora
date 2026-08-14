@@ -3,6 +3,7 @@ from enum import StrEnum
 
 from nexora.core.jobs import JobBoard
 from nexora.memory.memory import MemoryStore
+from nexora.models.conversation import MessageIntent
 from nexora.models.npc import NPC
 from nexora.social import SocialSystem
 
@@ -25,6 +26,7 @@ class Action:
     type: ActionType
     target_id: str | None = None
     content: str | None = None
+    intent: MessageIntent = MessageIntent.CASUAL
     reason: str = ""
 
 
@@ -212,6 +214,7 @@ class ActionExecutor:
                 recipient_id=action.target_id,
                 content=action.content,
                 tick=self.current_tick,
+                intent=action.intent,
             )
         except KeyError:
             return ActionResult(

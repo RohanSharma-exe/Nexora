@@ -1,36 +1,40 @@
 from dataclasses import dataclass, field
 
+from nexora.core.jobs import JobBoard
+from nexora.models.conversation import (
+    ConversationMemory,
+    ConversationMessage,
+    MessageIntent,
+)
 from nexora.models.relationship import Relationship
-
-
-@dataclass(slots=True)
-class Message:
-    """A message sent between NPCs."""
-
-    sender_id: str
-    recipient_id: str
-    content: str
-    tick: int
 
 
 @dataclass
 class SocialSystem:
-    """Manages NPC relationships and messages."""
+    """Manages relationships, conversations, and social memory."""
+
+    job_board: JobBoard | None = None
 
     relationships: dict[tuple[str, str], Relationship] = field(
         default_factory=dict,
     )
 
-    inboxes: dict[str, list[Message]] = field(
+    inboxes: dict[str, list[ConversationMessage]] = field(
         default_factory=dict,
     )
 
-    history: list[Message] = field(
+    history: list[ConversationMessage] = field(
         default_factory=list,
     )
 
+    memories: list[ConversationMemory] = field(
+        default_factory=list,
+    )
+
+    _next_message_id: int = 1
+
     def register_npc(self, npc_id: str) -> None:
-        """Register an NPC with the social system."""
+        """Register an NPC."""
 
         if npc_id not in self.inboxes:
             self.inboxes[npc_id] = []
@@ -58,8 +62,9 @@ class SocialSystem:
         recipient_id: str,
         content: str,
         tick: int,
-    ) -> Message:
-        """Send a message and update the relationship."""
+        intent: MessageIntent = MessageIntent.CASUAL,
+    ) -> ConversationMessage:
+        """Send and persist a message."""
 
         if sender_id not in self.inboxes:
             raise KeyError(f"Unknown sender: {sender_id}")
@@ -67,12 +72,16 @@ class SocialSystem:
         if recipient_id not in self.inboxes:
             raise KeyError(f"Unknown recipient: {recipient_id}")
 
-        message = Message(
+        message = ConversationMessage(
+            id=self._next_message_id,
             sender_id=sender_id,
             recipient_id=recipient_id,
             content=content,
+            intent=intent,
             tick=tick,
         )
+
+        self._next_message_id += 1
 
         self.inboxes[recipient_id].append(message)
         self.history.append(message)
@@ -86,10 +95,68 @@ class SocialSystem:
 
         return message
 
-    def inbox(self, npc_id: str) -> list[Message]:
-        """Return messages received by an NPC."""
+    def inbox(
+        self,
+        npc_id: str,
+        unprocessed_only: bool = False,
+    ) -> list[ConversationMessage]:
+        """Return an NPC's inbox."""
 
-        return list(self.inboxes.get(npc_id, []))
+        messages = self.inboxes.get(npc_id, [])
+
+        if unprocessed_only:
+            return [message for message in messages if not message.processed]
+
+        return list(messages)
+
+    def process_message(
+        self,
+        npc_id: str,
+        message_id: int,
+    ) -> ConversationMessage:
+        """Mark a message as processed."""
+
+        for message in self.inboxes.get(npc_id, []):
+            if message.id == message_id:
+                message.processed = True
+                return message
+
+        raise KeyError(f"Message {message_id} not found for {npc_id}")
+
+    def remember(
+        self,
+        message: ConversationMessage,
+        npc_id: str,
+        summary: str,
+        importance: float = 0.5,
+    ) -> ConversationMemory:
+        """Store a conversational memory."""
+
+        memory = ConversationMemory(
+            message_id=message.id,
+            npc_id=npc_id,
+            other_npc_id=message.sender_id,
+            summary=summary,
+            importance=importance,
+        )
+
+        self.memories.append(memory)
+
+        return memory
+
+    def memories_for(
+        self,
+        npc_id: str,
+        other_npc_id: str | None = None,
+    ) -> list[ConversationMemory]:
+        """Retrieve conversational memories."""
+
+        memories = [memory for memory in self.memories if memory.npc_id == npc_id]
+
+        if other_npc_id is not None:
+            memories = [memory for memory in memories if memory.other_npc_id == other_npc_id]
+
+        return memories
 
     def contacts(self, npc_id: str) -> list[str]:
         """Return NPCs that have interacted with this NPC."""
@@ -106,12 +173,17 @@ class SocialSystem:
         return sorted(contacts)
 
     def unread_count(self, npc_id: str) -> int:
-        """Return the number of received messages."""
+        """Return the number of unprocessed messages."""
 
-        return len(self.inboxes.get(npc_id, []))
+        return len(
+            self.inbox(
+                npc_id,
+                unprocessed_only=True,
+            )
+        )
 
     def suggest_contact(self, npc_id: str) -> str | None:
-        """Suggest another registered NPC to contact."""
+        """Suggest another NPC to contact."""
 
         candidates = sorted(candidate for candidate in self.inboxes if candidate != npc_id)
 

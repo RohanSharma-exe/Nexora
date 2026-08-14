@@ -1,6 +1,12 @@
 from dataclasses import dataclass
 
-from nexora.agent.actions import ActionExecutor, ActionResult
+from nexora.agent.actions import (
+    Action,
+    ActionExecutor,
+    ActionResult,
+    ActionType,
+)
+from nexora.agent.conversation import ConversationEngine
 from nexora.agent.decision import Decision, DecisionEngine, to_action
 from nexora.core.jobs import JobBoard
 from nexora.memory.memory import MemoryStore
@@ -33,6 +39,7 @@ class Agent:
         self.social = social
         self.memory = memory or MemoryStore()
         self.decision_engine = decision_engine or DecisionEngine()
+        self.conversation_engine = ConversationEngine()
 
     def observe(self) -> str:
         """Create a representation of the NPC's current state."""
@@ -109,7 +116,26 @@ class Agent:
                 )
 
     def tick(self, current_tick: int = 0) -> AgentResult:
-        """Run one observe → decide → act → update cycle."""
+        """Run one autonomous cycle."""
+
+        incoming = self.process_messages(
+            current_tick=current_tick,
+        )
+
+        if incoming is not None:
+            decision = Decision(
+                action=ActionType.SEND_MESSAGE.value,
+                reason="Responded to an incoming message.",
+                score=0.0,
+            )
+
+            self.update_goals(incoming)
+
+            return AgentResult(
+                npc_id=self.npc.id,
+                decision=decision,
+                result=incoming,
+            )
 
         self.observe()
 
@@ -126,4 +152,55 @@ class Agent:
             npc_id=self.npc.id,
             decision=decision,
             result=result,
+        )
+
+    def process_messages(
+        self,
+        current_tick: int,
+    ) -> ActionResult | None:
+        """Process one incoming message."""
+
+        messages = self.social.inbox(
+            self.npc.id,
+            unprocessed_only=True,
+        )
+
+        if not messages:
+            return None
+
+        message = messages[0]
+
+        response = self.conversation_engine.respond(
+            npc=self.npc,
+            message=message,
+            social=self.social,
+        )
+
+        self.social.process_message(
+            npc_id=self.npc.id,
+            message_id=message.id,
+        )
+
+        self.social.remember(
+            message=message,
+            npc_id=self.npc.id,
+            summary=(f"{message.sender_id} said: {message.content}"),
+            importance=response.importance,
+        )
+
+        executor = ActionExecutor(
+            job_board=self.job_board,
+            memory=self.memory,
+            social=self.social,
+            current_tick=current_tick,
+        )
+
+        return executor.execute(
+            npc=self.npc,
+            action=Action(
+                type=ActionType.SEND_MESSAGE,
+                target_id=message.sender_id,
+                content=response.content,
+                intent=response.intent,
+            ),
         )

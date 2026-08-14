@@ -23,6 +23,9 @@ class World:
         default_factory=SocialSystem,
     )
 
+    def __post_init__(self) -> None:
+        self.social.job_board = self.job_board
+
     agents: dict[str, Agent] = field(
         default_factory=dict,
     )

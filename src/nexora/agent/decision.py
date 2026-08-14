@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from nexora.agent.actions import Action, ActionType
 from nexora.agent.scoring import UtilityScorer
 from nexora.core.jobs import JobBoard
+from nexora.models.conversation import MessageIntent
 from nexora.models.npc import NPC
 from nexora.social import SocialSystem
 
@@ -15,6 +16,7 @@ class Decision:
     reason: str
     target_id: str | None = None
     content: str | None = None
+    intent: MessageIntent = MessageIntent.CASUAL
     score: float = 0.0
 
 
@@ -167,5 +169,6 @@ def to_action(decision: Decision) -> Action:
         type=ActionType(decision.action),
         target_id=decision.target_id,
         content=decision.content,
+        intent=decision.intent,
         reason=decision.reason,
     )
