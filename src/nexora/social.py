@@ -31,6 +31,10 @@ class SocialSystem:
         default_factory=list,
     )
 
+    last_message_tick: dict[tuple[str, str], int] = field(
+        default_factory=dict,
+    )
+
     _next_message_id: int = 1
 
     def register_npc(self, npc_id: str) -> None:
@@ -56,6 +60,24 @@ class SocialSystem:
 
         return self.relationships[key]
 
+    def can_message(
+        self,
+        sender_id: str,
+        recipient_id: str,
+        tick: int,
+        cooldown: int = 2,
+    ) -> bool:
+        """Return whether a sender can message a recipient."""
+
+        last_tick = self.last_message_tick.get(
+            (sender_id, recipient_id)
+        )
+
+        if last_tick is None:
+            return True
+
+        return tick - last_tick >= cooldown
+
     def send_message(
         self,
         sender_id: str,
@@ -72,6 +94,15 @@ class SocialSystem:
         if recipient_id not in self.inboxes:
             raise KeyError(f"Unknown recipient: {recipient_id}")
 
+        if not self.can_message(
+            sender_id,
+            recipient_id,
+            tick,
+        ):
+            raise ValueError(
+                f"Message cooldown active: {sender_id} -> {recipient_id}"
+            )
+
         message = ConversationMessage(
             id=self._next_message_id,
             sender_id=sender_id,
@@ -85,6 +116,7 @@ class SocialSystem:
 
         self.inboxes[recipient_id].append(message)
         self.history.append(message)
+        self.last_message_tick[(sender_id, recipient_id)] = tick
 
         relationship = self.get_relationship(
             sender_id,
@@ -105,7 +137,11 @@ class SocialSystem:
         messages = self.inboxes.get(npc_id, [])
 
         if unprocessed_only:
-            return [message for message in messages if not message.processed]
+            return [
+                message
+                for message in messages
+                if not message.processed
+            ]
 
         return list(messages)
 
@@ -121,7 +157,9 @@ class SocialSystem:
                 message.processed = True
                 return message
 
-        raise KeyError(f"Message {message_id} not found for {npc_id}")
+        raise KeyError(
+            f"Message {message_id} not found for {npc_id}"
+        )
 
     def remember(
         self,
@@ -151,10 +189,18 @@ class SocialSystem:
     ) -> list[ConversationMemory]:
         """Retrieve conversational memories."""
 
-        memories = [memory for memory in self.memories if memory.npc_id == npc_id]
+        memories = [
+            memory
+            for memory in self.memories
+            if memory.npc_id == npc_id
+        ]
 
         if other_npc_id is not None:
-            memories = [memory for memory in memories if memory.other_npc_id == other_npc_id]
+            memories = [
+                memory
+                for memory in memories
+                if memory.other_npc_id == other_npc_id
+            ]
 
         return memories
 
@@ -185,11 +231,19 @@ class SocialSystem:
     def suggest_contact(self, npc_id: str) -> str | None:
         """Suggest another NPC to contact."""
 
-        candidates = sorted(candidate for candidate in self.inboxes if candidate != npc_id)
+        candidates = sorted(
+            candidate
+            for candidate in self.inboxes
+            if candidate != npc_id
+        )
 
         known = set(self.contacts(npc_id))
 
-        unknown = [candidate for candidate in candidates if candidate not in known]
+        unknown = [
+            candidate
+            for candidate in candidates
+            if candidate not in known
+        ]
 
         if unknown:
             return unknown[0]
