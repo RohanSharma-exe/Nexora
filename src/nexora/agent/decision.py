@@ -34,6 +34,7 @@ class DecisionEngine:
         npc: NPC,
         job_board: JobBoard,
         social: SocialSystem | None = None,
+        current_tick: int = 0,
     ) -> Decision:
         """Select the next action for an NPC."""
 
@@ -41,7 +42,11 @@ class DecisionEngine:
             social = SocialSystem()
             social.register_npc(npc.id)
 
-        incomplete_goals = [goal for goal in npc.goals if not goal.completed]
+        incomplete_goals = [
+            goal
+            for goal in npc.goals
+            if not goal.completed
+        ]
 
         contacts = social.contacts(npc.id)
         unread = social.unread_count(npc.id)
@@ -56,15 +61,22 @@ class DecisionEngine:
             if "earn" not in goal.description.lower():
                 return Decision(
                     action=ActionType.IDLE.value,
-                    reason=(f"No implemented strategy for '{goal.description}'."),
+                    reason=(
+                        f"No implemented strategy for '{goal.description}'."
+                    ),
                 )
 
             suitable_jobs = [
-                job for job in job_board.available() if job.is_suitable_for(npc.skills)
+                job
+                for job in job_board.available()
+                if job.is_suitable_for(npc.skills)
             ]
 
             if suitable_jobs:
-                maximum_payment = max(job.payment for job in suitable_jobs)
+                maximum_payment = max(
+                    job.payment
+                    for job in suitable_jobs
+                )
 
                 scores = [
                     self.scorer.score_job(
@@ -107,19 +119,26 @@ class DecisionEngine:
                     score=best.score,
                 )
 
-            # No work available: use social network to seek help.
+            # No work available: use the social network to seek help.
             if npc.personality.sociability >= 0.6:
                 contact = social.suggest_contact(npc.id)
 
-                if contact is not None:
+                if contact is not None and social.can_message(
+                    npc.id,
+                    contact,
+                    current_tick,
+                ):
                     return Decision(
                         action=ActionType.SEND_MESSAGE.value,
                         target_id=contact,
                         content=(
-                            "I couldn't find suitable work. Do you know of anything available?"
+                            "I couldn't find suitable work. "
+                            "Do you know of anything available?"
                         ),
+                        intent=MessageIntent.REQUEST,
                         reason=(
-                            "No suitable jobs are available, so the NPC seeks help from a contact."
+                            "No suitable jobs are available, so the NPC "
+                            "seeks help from a contact."
                         ),
                         score=0.6,
                     )
@@ -129,30 +148,53 @@ class DecisionEngine:
                 reason="No suitable jobs are currently available.",
             )
 
-        # No active goals remain. Now social behavior can dominate.
+        # Process an incoming message only when the NPC is free to socialize.
         if unread > 0 and contacts:
             contact = contacts[-1]
 
             social_score = npc.personality.sociability * 0.75
 
-            if social_score >= 0.45:
+            if (
+                social_score >= 0.45
+                and social.can_message(
+                    npc.id,
+                    contact,
+                    current_tick,
+                )
+            ):
                 return Decision(
                     action=ActionType.SEND_MESSAGE.value,
                     target_id=contact,
-                    content=(f"Hey, {contact}. How are things going?"),
-                    reason=(f"{npc.name}'s sociability motivates social interaction."),
+                    content=(
+                        f"Hey, {contact}. How are things going?"
+                    ),
+                    intent=MessageIntent.GREETING,
+                    reason=(
+                        f"{npc.name}'s sociability motivates "
+                        "social interaction."
+                    ),
                     score=social_score,
                 )
 
         if npc.personality.sociability >= 0.6:
             contact = social.suggest_contact(npc.id)
 
-            if contact is not None:
+            if contact is not None and social.can_message(
+                npc.id,
+                contact,
+                current_tick,
+            ):
                 return Decision(
                     action=ActionType.SEND_MESSAGE.value,
                     target_id=contact,
-                    content=(f"Hey {contact}, what are you working on?"),
-                    reason=(f"{npc.name} has no active goals and chooses to socialize."),
+                    content=(
+                        f"Hey {contact}, what are you working on?"
+                    ),
+                    intent=MessageIntent.QUESTION,
+                    reason=(
+                        f"{npc.name} has no active goals "
+                        "and chooses to socialize."
+                    ),
                     score=npc.personality.sociability,
                 )
 
