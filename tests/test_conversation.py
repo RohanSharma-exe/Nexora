@@ -22,10 +22,6 @@ def test_question_about_work_gets_contextual_response() -> None:
         ]
     )
 
-    social = SocialSystem(
-        job_board=jobs,
-    )
-
     npc = NPC(
         id="alice",
         name="Alice",
@@ -54,8 +50,6 @@ def test_question_about_work_gets_contextual_response() -> None:
 
 
 def test_thanks_gets_polite_response() -> None:
-    social = SocialSystem()
-
     npc = NPC(
         id="alice",
         name="Alice",
