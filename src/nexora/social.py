@@ -61,6 +61,9 @@ class SocialSystem:
     ) -> Message:
         """Send a message and update the relationship."""
 
+        if sender_id not in self.inboxes:
+            raise KeyError(f"Unknown sender: {sender_id}")
+
         if recipient_id not in self.inboxes:
             raise KeyError(f"Unknown recipient: {recipient_id}")
 
@@ -106,3 +109,25 @@ class SocialSystem:
         """Return the number of received messages."""
 
         return len(self.inboxes.get(npc_id, []))
+
+    def suggest_contact(self, npc_id: str) -> str | None:
+        """Suggest another registered NPC to contact."""
+
+        candidates = sorted(
+            candidate
+            for candidate in self.inboxes
+            if candidate != npc_id
+        )
+
+        known = set(self.contacts(npc_id))
+
+        unknown = [
+            candidate
+            for candidate in candidates
+            if candidate not in known
+        ]
+
+        if unknown:
+            return unknown[0]
+
+        return candidates[0] if candidates else None
