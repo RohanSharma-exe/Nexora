@@ -113,19 +113,11 @@ class SocialSystem:
     def suggest_contact(self, npc_id: str) -> str | None:
         """Suggest another registered NPC to contact."""
 
-        candidates = sorted(
-            candidate
-            for candidate in self.inboxes
-            if candidate != npc_id
-        )
+        candidates = sorted(candidate for candidate in self.inboxes if candidate != npc_id)
 
         known = set(self.contacts(npc_id))
 
-        unknown = [
-            candidate
-            for candidate in candidates
-            if candidate not in known
-        ]
+        unknown = [candidate for candidate in candidates if candidate not in known]
 
         if unknown:
             return unknown[0]
