@@ -31,3 +31,27 @@ class Relationship(BaseModel):
             0.0,
             self.trust - amount,
         )
+
+    def adjust_trust(self, amount: float) -> None:
+        """Adjust trust while keeping it within bounds."""
+
+        self.trust = min(
+            1.0,
+            max(0.0, self.trust + amount),
+        )
+
+    def adjust_respect(self, amount: float) -> None:
+        """Adjust respect while keeping it within bounds."""
+
+        self.respect = min(
+            1.0,
+            max(0.0, self.respect + amount),
+        )
+
+    def adjust_familiarity(self, amount: float) -> None:
+        """Adjust familiarity while keeping it within bounds."""
+
+        self.familiarity = min(
+            1.0,
+            max(0.0, self.familiarity + amount),
+        )

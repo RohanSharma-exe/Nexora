@@ -76,6 +76,27 @@ class SocialSystem:
             relationship.trust * 0.5 + relationship.respect * 0.3 + relationship.familiarity * 0.2
         )
 
+    def apply_relationship_outcome(
+        self,
+        source_id: str,
+        target_id: str,
+        trust_delta: float = 0.0,
+        respect_delta: float = 0.0,
+        familiarity_delta: float = 0.0,
+    ) -> Relationship:
+        """Apply the consequences of an interaction."""
+
+        relationship = self.get_relationship(
+            source_id,
+            target_id,
+        )
+
+        relationship.adjust_trust(trust_delta)
+        relationship.adjust_respect(respect_delta)
+        relationship.adjust_familiarity(familiarity_delta)
+
+        return relationship
+
     def can_message(
         self,
         sender_id: str,

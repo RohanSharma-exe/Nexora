@@ -6,10 +6,11 @@ from nexora.agent.actions import (
     ActionResult,
     ActionType,
 )
-from nexora.agent.conversation import ConversationEngine
+from nexora.agent.conversation import ConversationEngine, ConversationResponse
 from nexora.agent.decision import Decision, DecisionEngine, to_action
 from nexora.core.jobs import JobBoard
 from nexora.memory.memory import MemoryStore
+from nexora.models.conversation import ConversationMessage, MessageIntent
 from nexora.models.npc import NPC
 from nexora.social import SocialSystem
 
@@ -77,6 +78,49 @@ class Agent:
 
         return any(not goal.completed for goal in self.npc.goals)
 
+    def _apply_conversation_consequence(
+        self,
+        message: ConversationMessage,
+        response: ConversationResponse,
+    ) -> None:
+        """Update the sender's relationship based on the response."""
+
+        if message.intent == MessageIntent.REQUEST:
+            if response.intent == MessageIntent.OFFER:
+                self.social.apply_relationship_outcome(
+                    source_id=message.sender_id,
+                    target_id=self.npc.id,
+                    trust_delta=0.08,
+                    respect_delta=0.05,
+                    familiarity_delta=0.02,
+                )
+                return
+
+            if response.intent == MessageIntent.REPLY:
+                self.social.apply_relationship_outcome(
+                    source_id=message.sender_id,
+                    target_id=self.npc.id,
+                    trust_delta=-0.04,
+                    familiarity_delta=0.02,
+                )
+                return
+
+        if message.intent == MessageIntent.THANKS:
+            self.social.apply_relationship_outcome(
+                source_id=message.sender_id,
+                target_id=self.npc.id,
+                trust_delta=0.03,
+                respect_delta=0.02,
+                familiarity_delta=0.02,
+            )
+            return
+
+        self.social.apply_relationship_outcome(
+            source_id=message.sender_id,
+            target_id=self.npc.id,
+            familiarity_delta=0.01,
+        )
+
     def process_message(
         self,
         current_tick: int,
@@ -108,6 +152,11 @@ class Agent:
             npc=self.npc,
             message=message,
             job_board=self.job_board,
+        )
+
+        self._apply_conversation_consequence(
+            message=message,
+            response=response,
         )
 
         self.social.process_message(

@@ -60,3 +60,62 @@ def test_active_goal_is_not_starved_by_messages() -> None:
 
     assert result.decision.action == "complete_job"
     assert npc.money == 3000
+
+
+def test_helpful_response_increases_sender_trust() -> None:
+    social = SocialSystem(
+        job_board=JobBoard(
+            [
+                Job(
+                    id="job-1",
+                    title="Python API Developer",
+                    description="Build an API.",
+                    payment=2500,
+                    required_skills=["python"],
+                )
+            ]
+        )
+    )
+
+    bob = NPC(
+        id="bob",
+        name="Bob",
+        occupation="Developer",
+        skills=["python"],
+    )
+
+    social.register_npc("alice")
+    social.register_npc("bob")
+
+    social.send_message(
+        sender_id="alice",
+        recipient_id="bob",
+        content="Do you know of any work?",
+        tick=1,
+        intent=MessageIntent.REQUEST,
+    )
+
+    agent = Agent(
+        npc=bob,
+        job_board=social.job_board or JobBoard(),
+        social=social,
+    )
+
+    before = social.get_relationship(
+        "alice",
+        "bob",
+    ).trust
+
+    result = agent.process_message(
+        current_tick=3,
+    )
+
+    assert result is not None
+    assert result.success
+
+    after = social.get_relationship(
+        "alice",
+        "bob",
+    ).trust
+
+    assert after > before

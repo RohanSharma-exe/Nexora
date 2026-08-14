@@ -23,10 +23,8 @@ but behave like independent inhabitants of an Internet-based world.
 
 ---
 
-## Current Status
-
-**Version:** V0.4.1  
-**Milestone:** Relationship-aware social behavior
+**Version:** V0.4.2  
+**Milestone:** Relationship consequences
 
 Current capabilities:
 
@@ -44,8 +42,11 @@ Current capabilities:
 - Trust
 - Respect
 - Familiarity
-- Social cooldowns
 - Relationship-aware contact selection
+- Relationship consequences
+- Trust increases when NPCs provide useful help
+- Trust decreases when NPCs fail to help
+- Social cooldowns
 - Deterministic simulation
 - Automated tests
 - Ruff linting/formatting
@@ -96,3 +97,62 @@ available opportunities, and social environment.
       ┌────────────┐
       │  Actions   │
       └────────────┘
+
+### V0.4 — Memory & Conversation
+
+- Conversation messages
+- Message intents
+- Inbox processing
+- Conversational memory
+- Contextual replies
+- Social cooldowns
+- Relationship-aware behavior
+- Relationship consequences
+
+### V0.5 — LLM Brain
+
+Planned:
+
+- LLM-backed reasoning
+- Natural conversations
+- Structured tool calls
+- Long-term memory retrieval
+- Reflection
+- Self-review
+- Personality-preserving prompts
+
+## Current Milestone — V0.4.2
+
+### Relationship Consequences
+
+Nexora NPC relationships now have consequences.
+
+NPC interactions can modify:
+
+- Trust
+- Respect
+- Familiarity
+
+Helpful interactions can increase trust and respect.
+
+Unhelpful interactions can decrease trust.
+
+Relationship values are bounded between 0 and 1.
+
+This creates the first social feedback loop:
+
+NPC action
+→ conversation
+→ outcome
+→ relationship change
+→ future social preference
+
+### Engineering Status
+
+- Python 3.14
+- uv
+- pytest
+- Ruff
+- mypy
+- Deterministic simulation
+- 30+ automated tests

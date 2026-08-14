@@ -138,3 +138,83 @@ def test_ranked_contacts_follow_relationship_strength() -> None:
         "bob",
         "john",
     ]
+
+
+def test_relationship_outcome_can_increase_trust() -> None:
+    social = SocialSystem()
+
+    social.register_npc("alice")
+    social.register_npc("bob")
+
+    relationship = social.get_relationship(
+        "alice",
+        "bob",
+    )
+
+    original_trust = relationship.trust
+
+    social.apply_relationship_outcome(
+        source_id="alice",
+        target_id="bob",
+        trust_delta=0.15,
+        respect_delta=0.10,
+    )
+
+    assert relationship.trust == original_trust + 0.15
+    assert relationship.respect == 0.60
+
+
+def test_relationship_outcome_can_decrease_trust() -> None:
+    social = SocialSystem()
+
+    social.register_npc("alice")
+    social.register_npc("bob")
+
+    relationship = social.get_relationship(
+        "alice",
+        "bob",
+    )
+
+    social.apply_relationship_outcome(
+        source_id="alice",
+        target_id="bob",
+        trust_delta=-0.20,
+    )
+
+    assert relationship.trust == 0.30
+
+
+def test_relationship_values_are_clamped() -> None:
+    social = SocialSystem()
+
+    social.register_npc("alice")
+    social.register_npc("bob")
+
+    relationship = social.get_relationship(
+        "alice",
+        "bob",
+    )
+
+    social.apply_relationship_outcome(
+        source_id="alice",
+        target_id="bob",
+        trust_delta=10.0,
+        respect_delta=10.0,
+        familiarity_delta=10.0,
+    )
+
+    assert relationship.trust == 1.0
+    assert relationship.respect == 1.0
+    assert relationship.familiarity == 1.0
+
+    social.apply_relationship_outcome(
+        source_id="alice",
+        target_id="bob",
+        trust_delta=-10.0,
+        respect_delta=-10.0,
+        familiarity_delta=-10.0,
+    )
+
+    assert relationship.trust == 0.0
+    assert relationship.respect == 0.0
+    assert relationship.familiarity == 0.0
