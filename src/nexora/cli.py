@@ -16,7 +16,7 @@ console = Console()
 
 
 def create_demo_world() -> World:
-    """Create the initial V0.1 world."""
+    """Create the initial V0.3 world."""
 
     world = World()
 
@@ -25,16 +25,12 @@ def create_demo_world() -> World:
         name="Alice",
         occupation="Python Developer",
         money=1000.0,
-        skills=[
-            "python",
-            "fastapi",
-            "sql",
-        ],
+        skills=["python", "fastapi", "sql"],
         personality=Personality(
             ambition=0.90,
             curiosity=0.80,
             risk_tolerance=0.90,
-            sociability=0.60,
+            sociability=0.80,
             greed=0.80,
             patience=0.20,
         ),
@@ -47,7 +43,49 @@ def create_demo_world() -> World:
         ],
     )
 
+    bob = NPC(
+        id="bob",
+        name="Bob",
+        occupation="Backend Developer",
+        money=1500.0,
+        skills=["python", "sql"],
+        personality=Personality(
+            ambition=0.60,
+            curiosity=0.60,
+            risk_tolerance=0.30,
+            sociability=0.70,
+            greed=0.40,
+            patience=0.70,
+        ),
+        goals=[
+            Goal(
+                description="Earn ₹3000",
+                priority=0.80,
+                target_amount=3000.0,
+            ),
+        ],
+    )
+
+    sarah = NPC(
+        id="sarah",
+        name="Sarah",
+        occupation="Product Designer",
+        money=3000.0,
+        skills=["design"],
+        personality=Personality(
+            ambition=0.70,
+            curiosity=0.90,
+            risk_tolerance=0.50,
+            sociability=0.90,
+            greed=0.30,
+            patience=0.60,
+        ),
+        goals=[],
+    )
+
     world.add_npc(alice)
+    world.add_npc(bob)
+    world.add_npc(sarah)
 
     world.add_job(
         Job(
@@ -105,10 +143,16 @@ def simulate(
 
     console.print(
         Panel.fit(
-            "[bold]NEXORA V0.2[/bold]\nPersonality-Driven Decisions",
+            "[bold]NEXORA V0.3[/bold]\nMultiple NPCs + Social System",
             border_style="cyan",
         )
     )
+
+    console.print("\n[bold]NPCs:[/bold]")
+
+    for agent in world.agents.values():
+        npc = agent.npc
+        console.print(f"  • {npc.name} — {npc.occupation}")
 
     console.print("\n[bold]Available jobs:[/bold]")
 
@@ -145,15 +189,29 @@ def simulate(
                         f"{goal.target_amount:.0f}) "
                         f"[{status}]"
                     )
-                else:
-                    console.print(f"  Goal: {goal.description} [{status}]")
+
+        console.print("\n[bold magenta]Social activity:[/bold magenta]")
+
+        for message in world.social.history:
+            if message.tick == world.tick_count:
+                console.print(f"  {message.sender_id} → {message.recipient_id}: {message.content}")
+
+        console.print("\n[bold yellow]Relationships:[/bold yellow]")
+
+        for relationship in world.social.relationships.values():
+            console.print(
+                f"  {relationship.source_id} → "
+                f"{relationship.target_id} "
+                f"trust={relationship.trust:.2f} "
+                f"familiarity={relationship.familiarity:.2f}"
+            )
 
 
 @app.command()
 def version() -> None:
     """Show the Nexora version."""
 
-    console.print("Nexora 0.1.1")
+    console.print("Nexora 0.3.0")
 
 
 def main() -> None:

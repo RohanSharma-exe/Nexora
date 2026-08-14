@@ -4,6 +4,7 @@ from enum import StrEnum
 from nexora.core.jobs import JobBoard
 from nexora.memory.memory import MemoryStore
 from nexora.models.npc import NPC
+from nexora.social import SocialSystem
 
 
 class ActionType(StrEnum):
@@ -13,6 +14,7 @@ class ActionType(StrEnum):
     COMPLETE_JOB = "complete_job"
     REST = "rest"
     WAIT = "wait"
+    SEND_MESSAGE = "send_message"
     IDLE = "idle"
 
 
@@ -22,6 +24,7 @@ class Action:
 
     type: ActionType
     target_id: str | None = None
+    content: str | None = None
     reason: str = ""
 
 
@@ -41,16 +44,20 @@ class ActionExecutor:
         self,
         job_board: JobBoard,
         memory: MemoryStore,
+        social: SocialSystem,
+        current_tick: int = 0,
     ) -> None:
         self.job_board = job_board
         self.memory = memory
+        self.social = social
+        self.current_tick = current_tick
 
     def execute(
         self,
         npc: NPC,
         action: Action,
     ) -> ActionResult:
-        """Execute an action and mutate NPC/world state."""
+        """Execute an action and mutate world state."""
 
         if action.type == ActionType.LOOK_FOR_WORK:
             return self._look_for_work(npc)
@@ -63,6 +70,9 @@ class ActionExecutor:
 
         if action.type == ActionType.WAIT:
             return self._wait(npc)
+
+        if action.type == ActionType.SEND_MESSAGE:
+            return self._send_message(npc, action)
 
         return ActionResult(
             success=True,
@@ -172,6 +182,48 @@ class ActionExecutor:
         self.memory.add(
             content=message,
             importance=0.3,
+        )
+
+        return ActionResult(
+            success=True,
+            message=message,
+        )
+
+    def _send_message(
+        self,
+        npc: NPC,
+        action: Action,
+    ) -> ActionResult:
+        if action.target_id is None:
+            return ActionResult(
+                success=False,
+                message="No message recipient was specified.",
+            )
+
+        if not action.content:
+            return ActionResult(
+                success=False,
+                message="Message content cannot be empty.",
+            )
+
+        try:
+            self.social.send_message(
+                sender_id=npc.id,
+                recipient_id=action.target_id,
+                content=action.content,
+                tick=self.current_tick,
+            )
+        except KeyError:
+            return ActionResult(
+                success=False,
+                message=(f"Unknown recipient: {action.target_id}"),
+            )
+
+        message = f"{npc.name} sent a message to {action.target_id}: {action.content}"
+
+        self.memory.add(
+            content=message,
+            importance=0.5,
         )
 
         return ActionResult(

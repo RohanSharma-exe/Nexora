@@ -5,6 +5,7 @@ from nexora.agent.decision import Decision, DecisionEngine, to_action
 from nexora.core.jobs import JobBoard
 from nexora.memory.memory import MemoryStore
 from nexora.models.npc import NPC
+from nexora.social import SocialSystem
 
 
 @dataclass(slots=True)
@@ -23,11 +24,13 @@ class Agent:
         self,
         npc: NPC,
         job_board: JobBoard,
+        social: SocialSystem,
         memory: MemoryStore | None = None,
         decision_engine: DecisionEngine | None = None,
     ) -> None:
         self.npc = npc
         self.job_board = job_board
+        self.social = social
         self.memory = memory or MemoryStore()
         self.decision_engine = decision_engine or DecisionEngine()
 
@@ -47,7 +50,9 @@ class Agent:
             f"Energy: {self.npc.energy:.2f}\n"
             f"Reputation: {self.npc.reputation:.2f}\n"
             f"Goals: {goals}\n"
-            f"Suitable jobs: {jobs}"
+            f"Suitable jobs: {jobs}\n"
+            f"Contacts: {self.social.contacts(self.npc.id)}\n"
+            f"Unread messages: {self.social.unread_count(self.npc.id)}"
         )
 
     def decide(self) -> Decision:
@@ -56,9 +61,14 @@ class Agent:
         return self.decision_engine.decide(
             self.npc,
             self.job_board,
+            self.social,
         )
 
-    def act(self, decision: Decision) -> ActionResult:
+    def act(
+        self,
+        decision: Decision,
+        current_tick: int = 0,
+    ) -> ActionResult:
         """Execute the selected action."""
 
         action = to_action(decision)
@@ -66,6 +76,8 @@ class Agent:
         executor = ActionExecutor(
             job_board=self.job_board,
             memory=self.memory,
+            social=self.social,
+            current_tick=current_tick,
         )
 
         return executor.execute(
@@ -96,14 +108,17 @@ class Agent:
                     importance=1.0,
                 )
 
-    def tick(self) -> AgentResult:
+    def tick(self, current_tick: int = 0) -> AgentResult:
         """Run one observe → decide → act → update cycle."""
 
         self.observe()
 
         decision = self.decide()
 
-        result = self.act(decision)
+        result = self.act(
+            decision,
+            current_tick=current_tick,
+        )
 
         self.update_goals(result)
 

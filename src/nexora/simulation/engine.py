@@ -11,10 +11,16 @@ class SimulationEngine:
     def tick(self) -> list[AgentResult]:
         """Run exactly one simulation tick."""
 
+        self.world.tick_count += 1
+
         results: list[AgentResult] = []
 
         for agent in self.world.agents.values():
-            results.append(agent.tick())
+            results.append(
+                agent.tick(
+                    current_tick=self.world.tick_count,
+                )
+            )
 
         self.world.advance_time()
 

@@ -41,3 +41,4 @@ def test_one_engine_tick_executes_agents_once() -> None:
     assert results[0].decision.action == "complete_job"
     assert world.get_npc("alice").money == 3000
     assert world.hour == 10
+    assert world.tick_count == 1

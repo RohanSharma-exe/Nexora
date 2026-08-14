@@ -4,17 +4,23 @@ from nexora.agent.agent import Agent
 from nexora.core.jobs import JobBoard
 from nexora.models.job import Job
 from nexora.models.npc import NPC
+from nexora.social import SocialSystem
 
 
 @dataclass
 class World:
-    """The simulated world containing NPCs and world resources."""
+    """The simulated world containing NPCs and resources."""
 
     day: int = 1
     hour: int = 9
+    tick_count: int = 0
 
     job_board: JobBoard = field(
         default_factory=JobBoard,
+    )
+
+    social: SocialSystem = field(
+        default_factory=SocialSystem,
     )
 
     agents: dict[str, Agent] = field(
@@ -27,9 +33,12 @@ class World:
         if npc.id in self.agents:
             raise ValueError(f"NPC already exists: {npc.id}")
 
+        self.social.register_npc(npc.id)
+
         self.agents[npc.id] = Agent(
             npc=npc,
             job_board=self.job_board,
+            social=self.social,
         )
 
     def add_job(self, job: Job) -> None:

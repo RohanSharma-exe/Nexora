@@ -2,6 +2,7 @@ from nexora.agent.agent import Agent
 from nexora.core.jobs import JobBoard
 from nexora.models.job import Job
 from nexora.models.npc import NPC, Goal
+from nexora.social import SocialSystem
 
 
 def create_npc() -> NPC:
@@ -18,6 +19,14 @@ def create_npc() -> NPC:
                 target_amount=5000,
             )
         ],
+    )
+
+
+def create_agent(npc: NPC) -> Agent:
+    return Agent(
+        npc=npc,
+        job_board=JobBoard(),
+        social=SocialSystem(),
     )
 
 
@@ -39,6 +48,7 @@ def test_npc_can_select_job() -> None:
     agent = Agent(
         npc=npc,
         job_board=job_board,
+        social=SocialSystem(),
     )
 
     decision = agent.decide()
@@ -65,6 +75,7 @@ def test_agent_can_complete_job() -> None:
     agent = Agent(
         npc=npc,
         job_board=job_board,
+        social=SocialSystem(),
     )
 
     result = agent.tick()
@@ -93,6 +104,7 @@ def test_agent_completes_earn_goal() -> None:
     agent = Agent(
         npc=npc,
         job_board=job_board,
+        social=SocialSystem(),
     )
 
     agent.tick()
