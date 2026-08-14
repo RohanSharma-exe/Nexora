@@ -71,6 +71,65 @@ class Agent:
             self.social,
         )
 
+    def _has_active_goal(self) -> bool:
+        """Return whether the NPC has an incomplete goal."""
+
+        return any(not goal.completed for goal in self.npc.goals)
+
+    def process_message(
+        self,
+        current_tick: int,
+    ) -> ActionResult | None:
+        """Process one incoming message when socially appropriate."""
+
+        if self._has_active_goal():
+            return None
+
+        messages = self.social.inbox(
+            self.npc.id,
+            unprocessed_only=True,
+        )
+
+        if not messages:
+            return None
+
+        message = messages[0]
+
+        response = self.conversation_engine.respond(
+            npc=self.npc,
+            message=message,
+            job_board=self.job_board,
+        )
+
+        self.social.process_message(
+            npc_id=self.npc.id,
+            message_id=message.id,
+        )
+
+        self.social.remember(
+            message=message,
+            npc_id=self.npc.id,
+            summary=(f"{message.sender_id} said: {message.content}"),
+            importance=response.importance,
+        )
+
+        executor = ActionExecutor(
+            job_board=self.job_board,
+            memory=self.memory,
+            social=self.social,
+            current_tick=current_tick,
+        )
+
+        return executor.execute(
+            npc=self.npc,
+            action=Action(
+                type=ActionType.SEND_MESSAGE,
+                target_id=message.sender_id,
+                content=response.content,
+                intent=response.intent,
+            ),
+        )
+
     def act(
         self,
         decision: Decision,
@@ -118,7 +177,7 @@ class Agent:
     def tick(self, current_tick: int = 0) -> AgentResult:
         """Run one autonomous cycle."""
 
-        incoming = self.process_messages(
+        incoming = self.process_message(
             current_tick=current_tick,
         )
 
@@ -126,10 +185,7 @@ class Agent:
             decision = Decision(
                 action=ActionType.SEND_MESSAGE.value,
                 reason="Responded to an incoming message.",
-                score=0.0,
             )
-
-            self.update_goals(incoming)
 
             return AgentResult(
                 npc_id=self.npc.id,
@@ -152,55 +208,4 @@ class Agent:
             npc_id=self.npc.id,
             decision=decision,
             result=result,
-        )
-
-    def process_messages(
-        self,
-        current_tick: int,
-    ) -> ActionResult | None:
-        """Process one incoming message."""
-
-        messages = self.social.inbox(
-            self.npc.id,
-            unprocessed_only=True,
-        )
-
-        if not messages:
-            return None
-
-        message = messages[0]
-
-        response = self.conversation_engine.respond(
-            npc=self.npc,
-            message=message,
-            social=self.social,
-        )
-
-        self.social.process_message(
-            npc_id=self.npc.id,
-            message_id=message.id,
-        )
-
-        self.social.remember(
-            message=message,
-            npc_id=self.npc.id,
-            summary=(f"{message.sender_id} said: {message.content}"),
-            importance=response.importance,
-        )
-
-        executor = ActionExecutor(
-            job_board=self.job_board,
-            memory=self.memory,
-            social=self.social,
-            current_tick=current_tick,
-        )
-
-        return executor.execute(
-            npc=self.npc,
-            action=Action(
-                type=ActionType.SEND_MESSAGE,
-                target_id=message.sender_id,
-                content=response.content,
-                intent=response.intent,
-            ),
         )

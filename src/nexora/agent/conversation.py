@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 
+from nexora.core.jobs import JobBoard
 from nexora.models.conversation import (
     ConversationMessage,
     MessageIntent,
 )
 from nexora.models.npc import NPC
-from nexora.social import SocialSystem
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,7 +24,7 @@ class ConversationEngine:
         self,
         npc: NPC,
         message: ConversationMessage,
-        social: SocialSystem,
+        job_board: JobBoard,
     ) -> ConversationResponse:
         """Generate a contextual response."""
 
@@ -33,21 +33,21 @@ class ConversationEngine:
         if message.intent == MessageIntent.THANKS or "thank" in text:
             return ConversationResponse(
                 content="You're welcome!",
-                intent=MessageIntent.REPLY,
+                intent=MessageIntent.THANKS,
                 importance=0.4,
             )
 
         if "work" in text and (
             "?" in message.content
-            or message.intent == MessageIntent.QUESTION
-            or message.intent == MessageIntent.REQUEST
+            or message.intent
+            in {
+                MessageIntent.QUESTION,
+                MessageIntent.REQUEST,
+            }
         ):
-            suitable_jobs = []
-
-            if social.job_board is not None:
-                suitable_jobs = [
-                    job for job in social.job_board.available() if job.is_suitable_for(npc.skills)
-                ]
+            suitable_jobs = [
+                job for job in job_board.available() if job.is_suitable_for(npc.skills)
+            ]
 
             if suitable_jobs:
                 job = max(
@@ -58,8 +58,8 @@ class ConversationEngine:
                 return ConversationResponse(
                     content=(
                         f"I found a {job.title} paying "
-                        f"₹{job.payment:.0f}. You might want to "
-                        "check it out."
+                        f"₹{job.payment:.0f}. "
+                        "You might want to check it out."
                     ),
                     intent=MessageIntent.OFFER,
                     importance=0.8,
@@ -87,7 +87,7 @@ class ConversationEngine:
             )
 
         return ConversationResponse(
-            content=("Interesting. I'll keep that in mind."),
+            content="Interesting. I'll keep that in mind.",
             intent=MessageIntent.REPLY,
             importance=0.3,
         )

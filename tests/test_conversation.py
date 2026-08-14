@@ -45,7 +45,7 @@ def test_question_about_work_gets_contextual_response() -> None:
     response = ConversationEngine().respond(
         npc=npc,
         message=message,
-        social=social,
+        job_board=jobs,
     )
 
     assert "Python API Job" in response.content
@@ -74,7 +74,7 @@ def test_thanks_gets_polite_response() -> None:
     response = ConversationEngine().respond(
         npc=npc,
         message=message,
-        social=social,
+        job_board=JobBoard(),
     )
 
     assert response.content == "You're welcome!"
