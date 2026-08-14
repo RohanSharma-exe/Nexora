@@ -31,12 +31,12 @@ def create_demo_world() -> World:
             "sql",
         ],
         personality=Personality(
-            ambition=0.85,
+            ambition=0.90,
             curiosity=0.80,
-            risk_tolerance=0.55,
+            risk_tolerance=0.90,
             sociability=0.60,
-            greed=0.40,
-            patience=0.65,
+            greed=0.80,
+            patience=0.20,
         ),
         goals=[
             Goal(
@@ -105,7 +105,7 @@ def simulate(
 
     console.print(
         Panel.fit(
-            "[bold]NEXORA V0.1.1[/bold]\nCorrected Agent Loop",
+            "[bold]NEXORA V0.2[/bold]\nPersonality-Driven Decisions",
             border_style="cyan",
         )
     )
@@ -131,6 +131,7 @@ def simulate(
             console.print(f"\n[bold]{npc.name}[/bold]")
             console.print(f"  Money: ₹{npc.money:.2f}")
             console.print(f"  Decision: {result.decision.action}")
+            console.print(f"  Utility: {result.decision.score:.2f}")
             console.print(f"  Reason: {result.decision.reason}")
             console.print(f"  Result: {result.result.message}")
 

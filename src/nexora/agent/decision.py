@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from nexora.agent.actions import Action, ActionType
+from nexora.agent.scoring import UtilityScorer
 from nexora.core.jobs import JobBoard
 from nexora.models.npc import NPC
 
@@ -12,10 +13,17 @@ class Decision:
     action: str
     reason: str
     target_id: str | None = None
+    score: float = 0.0
 
 
 class DecisionEngine:
-    """Produces actions from the NPC and world state."""
+    """Selects actions using goals and personality."""
+
+    def __init__(
+        self,
+        scorer: UtilityScorer | None = None,
+    ) -> None:
+        self.scorer = scorer or UtilityScorer()
 
     def decide(
         self,
@@ -35,42 +43,61 @@ class DecisionEngine:
             key=lambda item: item.priority,
         )
 
-        if "earn" in goal.description.lower():
-            suitable_jobs = [
-                job for job in job_board.available() if job.is_suitable_for(npc.skills)
-            ]
-
-            if not suitable_jobs:
-                return Decision(
-                    action=ActionType.REST.value,
-                    reason=(
-                        "There are no suitable jobs available. "
-                        "The NPC will rest before trying again."
-                    ),
-                )
-
-            best_job = max(
-                suitable_jobs,
-                key=lambda job: job.payment,
-            )
-
+        if "earn" not in goal.description.lower():
             return Decision(
-                action=ActionType.COMPLETE_JOB.value,
-                target_id=best_job.id,
-                reason=(
-                    f"The highest-priority goal is '{goal.description}'. "
-                    f"The best available opportunity is "
-                    f"'{best_job.title}' paying ₹{best_job.payment:.2f}."
-                ),
+                action=ActionType.IDLE.value,
+                reason=(f"No implemented strategy for '{goal.description}'."),
             )
+
+        suitable_jobs = [job for job in job_board.available() if job.is_suitable_for(npc.skills)]
+
+        if not suitable_jobs:
+            return Decision(
+                action=ActionType.WAIT.value,
+                reason="No suitable jobs are currently available.",
+            )
+
+        maximum_payment = max(job.payment for job in suitable_jobs)
+
+        scores = [
+            self.scorer.score_job(
+                npc=npc,
+                job=job,
+                maximum_payment=maximum_payment,
+            )
+            for job in suitable_jobs
+        ]
+
+        best = max(
+            scores,
+            key=lambda score: score.score,
+        )
+
+        wait_score = self.scorer.score_wait(npc)
+
+        if wait_score > best.score:
+            return Decision(
+                action=ActionType.WAIT.value,
+                reason=(
+                    f"Personality favors waiting. "
+                    f"Wait score {wait_score:.2f} > "
+                    f"best job score {best.score:.2f}."
+                ),
+                score=wait_score,
+            )
+
+        selected_job = job_board.get(best.job_id)
 
         return Decision(
-            action=ActionType.IDLE.value,
+            action=ActionType.COMPLETE_JOB.value,
+            target_id=selected_job.id,
             reason=(
-                f"The highest-priority goal is "
-                f"'{goal.description}', but no action "
-                "is currently implemented for it."
+                f"Selected '{selected_job.title}' using utility "
+                f"score {best.score:.2f}. "
+                f"Payment ₹{selected_job.payment:.2f}, "
+                f"risk penalty {best.risk_penalty:.2f}."
             ),
+            score=best.score,
         )
 
 

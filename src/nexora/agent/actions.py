@@ -12,6 +12,7 @@ class ActionType(StrEnum):
     LOOK_FOR_WORK = "look_for_work"
     COMPLETE_JOB = "complete_job"
     REST = "rest"
+    WAIT = "wait"
     IDLE = "idle"
 
 
@@ -60,6 +61,9 @@ class ActionExecutor:
         if action.type == ActionType.REST:
             return self._rest(npc)
 
+        if action.type == ActionType.WAIT:
+            return self._wait(npc)
+
         return ActionResult(
             success=True,
             message=f"{npc.name} is idle.",
@@ -81,16 +85,11 @@ class ActionExecutor:
                 message=message,
             )
 
-        best_job = max(
-            jobs,
-            key=lambda job: job.payment,
-        )
-
-        message = f"{npc.name} found a suitable job: {best_job.title} for ₹{best_job.payment:.2f}."
+        message = f"{npc.name} found {len(jobs)} suitable job opportunities."
 
         self.memory.add(
             content=message,
-            importance=0.6,
+            importance=0.4,
         )
 
         return ActionResult(
@@ -130,7 +129,6 @@ class ActionExecutor:
             )
 
         self.job_board.complete(job.id)
-
         npc.money += job.payment
 
         message = f"{npc.name} completed '{job.title}' and earned ₹{job.payment:.2f}."
@@ -161,6 +159,19 @@ class ActionExecutor:
         self.memory.add(
             content=message,
             importance=0.2,
+        )
+
+        return ActionResult(
+            success=True,
+            message=message,
+        )
+
+    def _wait(self, npc: NPC) -> ActionResult:
+        message = f"{npc.name} decided to wait for a better opportunity."
+
+        self.memory.add(
+            content=message,
+            importance=0.3,
         )
 
         return ActionResult(
