@@ -60,3 +60,81 @@ def test_unknown_recipient_is_rejected() -> None:
         return
 
     raise AssertionError("Expected unknown recipient to raise KeyError")
+
+
+def test_higher_trust_contact_is_preferred() -> None:
+    social = SocialSystem()
+
+    social.register_npc("alice")
+    social.register_npc("bob")
+    social.register_npc("sarah")
+
+    social.send_message(
+        sender_id="alice",
+        recipient_id="bob",
+        content="Hello Bob",
+        tick=1,
+    )
+
+    social.send_message(
+        sender_id="alice",
+        recipient_id="sarah",
+        content="Hello Sarah",
+        tick=1,
+    )
+
+    bob = social.get_relationship(
+        "alice",
+        "bob",
+    )
+
+    bob.trust = 0.9
+    bob.respect = 0.9
+    bob.familiarity = 0.8
+
+    sarah = social.get_relationship(
+        "alice",
+        "sarah",
+    )
+
+    sarah.trust = 0.2
+    sarah.respect = 0.2
+    sarah.familiarity = 0.2
+
+    assert social.suggest_contact("alice") == "bob"
+
+
+def test_ranked_contacts_follow_relationship_strength() -> None:
+    social = SocialSystem()
+
+    for npc_id in ("alice", "bob", "sarah", "john"):
+        social.register_npc(npc_id)
+
+    for target in ("bob", "sarah", "john"):
+        social.send_message(
+            sender_id="alice",
+            recipient_id=target,
+            content="Hello",
+            tick=1,
+        )
+
+    social.get_relationship(
+        "alice",
+        "bob",
+    ).trust = 0.6
+
+    social.get_relationship(
+        "alice",
+        "sarah",
+    ).trust = 0.9
+
+    social.get_relationship(
+        "alice",
+        "john",
+    ).trust = 0.3
+
+    assert social.ranked_contacts("alice") == [
+        "sarah",
+        "bob",
+        "john",
+    ]

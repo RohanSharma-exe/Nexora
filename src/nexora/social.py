@@ -60,6 +60,22 @@ class SocialSystem:
 
         return self.relationships[key]
 
+    def relationship_score(
+        self,
+        source_id: str,
+        target_id: str,
+    ) -> float:
+        """Calculate how attractive a relationship is to an NPC."""
+
+        relationship = self.get_relationship(
+            source_id,
+            target_id,
+        )
+
+        return (
+            relationship.trust * 0.5 + relationship.respect * 0.3 + relationship.familiarity * 0.2
+        )
+
     def can_message(
         self,
         sender_id: str,
@@ -112,6 +128,7 @@ class SocialSystem:
 
         self.inboxes[recipient_id].append(message)
         self.history.append(message)
+
         self.last_message_tick[(sender_id, recipient_id)] = tick
 
         relationship = self.get_relationship(
@@ -186,7 +203,10 @@ class SocialSystem:
 
         return memories
 
-    def contacts(self, npc_id: str) -> list[str]:
+    def contacts(
+        self,
+        npc_id: str,
+    ) -> list[str]:
         """Return NPCs that have interacted with this NPC."""
 
         contacts: set[str] = set()
@@ -200,7 +220,29 @@ class SocialSystem:
 
         return sorted(contacts)
 
-    def unread_count(self, npc_id: str) -> int:
+    def ranked_contacts(
+        self,
+        npc_id: str,
+    ) -> list[str]:
+        """Return contacts ordered by relationship strength."""
+
+        contacts = self.contacts(npc_id)
+
+        return sorted(
+            contacts,
+            key=lambda contact: (
+                -self.relationship_score(
+                    npc_id,
+                    contact,
+                ),
+                contact,
+            ),
+        )
+
+    def unread_count(
+        self,
+        npc_id: str,
+    ) -> int:
         """Return the number of unprocessed messages."""
 
         return len(
@@ -210,16 +252,26 @@ class SocialSystem:
             )
         )
 
-    def suggest_contact(self, npc_id: str) -> str | None:
-        """Suggest another NPC to contact."""
+    def suggest_contact(
+        self,
+        npc_id: str,
+    ) -> str | None:
+        """Suggest the strongest available social connection."""
 
         candidates = sorted(candidate for candidate in self.inboxes if candidate != npc_id)
 
-        known = set(self.contacts(npc_id))
+        if not candidates:
+            return None
 
-        unknown = [candidate for candidate in candidates if candidate not in known]
+        ranked = sorted(
+            candidates,
+            key=lambda candidate: (
+                -self.relationship_score(
+                    npc_id,
+                    candidate,
+                ),
+                candidate,
+            ),
+        )
 
-        if unknown:
-            return unknown[0]
-
-        return candidates[0] if candidates else None
+        return ranked[0]

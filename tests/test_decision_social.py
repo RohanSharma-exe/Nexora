@@ -103,3 +103,62 @@ def test_goal_npc_asks_contact_when_no_jobs() -> None:
 
     assert decision.action == "send_message"
     assert decision.target_id == "bob"
+
+
+def test_goal_npc_prefers_trusted_contact_when_no_jobs() -> None:
+    npc = NPC(
+        id="alice",
+        name="Alice",
+        occupation="Developer",
+        skills=["python"],
+        personality=Personality(
+            sociability=0.8,
+        ),
+        goals=[
+            Goal(
+                description="Earn ₹5000",
+                priority=1.0,
+                target_amount=5000,
+            )
+        ],
+    )
+
+    social = SocialSystem()
+
+    social.register_npc("alice")
+    social.register_npc("bob")
+    social.register_npc("sarah")
+
+    social.send_message(
+        sender_id="alice",
+        recipient_id="bob",
+        content="Hello",
+        tick=1,
+    )
+
+    social.send_message(
+        sender_id="alice",
+        recipient_id="sarah",
+        content="Hello",
+        tick=1,
+    )
+
+    social.get_relationship(
+        "alice",
+        "sarah",
+    ).trust = 0.95
+
+    social.get_relationship(
+        "alice",
+        "bob",
+    ).trust = 0.2
+
+    decision = DecisionEngine().decide(
+        npc,
+        JobBoard(),
+        social,
+        current_tick=3,
+    )
+
+    assert decision.action == "send_message"
+    assert decision.target_id == "sarah"
