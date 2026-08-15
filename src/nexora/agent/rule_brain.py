@@ -80,19 +80,11 @@ class RuleBasedBrain(Brain):
             job_risk = risks.get(job_id, 0.5)
             risk_distance = abs(job_risk - risk_tolerance)
 
-            value_component = base_score * (
-                0.50
-                + 0.20 * greed
-                + 0.15 * ambition
-            )
+            value_component = base_score * (0.50 + 0.20 * greed + 0.15 * ambition)
             urgency_component = urgency * 500.0
             risk_component = -risk_distance * 5000.0
 
-            return (
-                value_component
-                + urgency_component
-                + risk_component
-            )
+            return value_component + urgency_component + risk_component
 
         return max(observation.available_jobs, key=utility)
 
