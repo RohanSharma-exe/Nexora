@@ -17,16 +17,19 @@ independent NPCs with:
 - Memory
 - Social preferences
 - Autonomous decisions
+- Pluggable decision-making brains
+- Structured observations
+- Explicit action intents
 
 The long-term goal is to create NPCs that don't simply respond to a user,
 but behave like independent inhabitants of an Internet-based world.
 
 ---
 
-**Version:** V0.4.2  
-**Milestone:** Relationship consequences
+**Version:** V0.6.2  
+**Milestone:** Brain-driven simulation
 
-Current capabilities:
+## Current capabilities
 
 - Multiple autonomous NPCs
 - Personality-driven utility decisions
@@ -38,21 +41,59 @@ Current capabilities:
 - Conversation intents
 - Incoming-message processing
 - Conversational memory
+- Contextual replies
 - Relationship tracking
 - Trust
 - Respect
 - Familiarity
+- Reputation
 - Relationship-aware contact selection
 - Relationship consequences
-- Trust increases when NPCs provide useful help
-- Trust decreases when NPCs fail to help
 - Social cooldowns
 - Deterministic simulation
+- Structured NPC observations
+- Pluggable NPC brain interface
+- Deterministic rule-based brain
+- Brain-driven action execution
+- Legacy decision engine preserved
 - Automated tests
 - Ruff linting/formatting
 - Mypy type checking
+- GitHub Actions CI
 
----
+## Running Nexora
+
+Install dependencies with uv:
+
+```cmd
+uv sync
+```
+
+Run the existing simulation:
+
+```cmd
+uv run nexora simulate --ticks 5
+```
+
+Run the simulation through the rule-based brain:
+
+```cmd
+uv run nexora simulate --ticks 5 --brain rule
+```
+
+Run the complete test suite:
+
+```cmd
+uv run pytest
+```
+
+Run quality checks:
+
+```cmd
+uv run ruff check src tests
+uv run ruff format --check src tests
+uv run mypy src
+```
 
 ## Example NPCs
 
@@ -69,34 +110,66 @@ NPC behavior is not scripted as a fixed sequence.
 Decisions depend on the NPC's current state, personality, goals,
 available opportunities, and social environment.
 
----
-
 ## Architecture
 
 ```text
-                    ┌──────────────────┐
-                    │  Simulation      │
-                    │     World        │
-                    └────────┬─────────┘
-                             │
-             ┌───────────────┼────────────────┐
-             │               │                │
-             ▼               ▼                ▼
-       ┌──────────┐    ┌──────────┐    ┌────────────┐
-       │   NPC    │    │   Jobs   │    │   Social   │
-       │  Agents  │    │  System  │    │   System   │
-       └────┬─────┘    └──────────┘    └─────┬──────┘
-            │                                  │
-            ▼                                  ▼
-      ┌────────────┐                    ┌────────────┐
-      │ Decision   │                    │Relationship│
-      │   Engine   │                    │   Memory   │
-      └─────┬──────┘                    └────────────┘
-            │
-            ▼
-      ┌────────────┐
-      │  Actions   │
-      └────────────┘
+                         ┌──────────────────┐
+                         │ Simulation World │
+                         └────────┬─────────┘
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │      Agent       │
+                         └────────┬─────────┘
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │   Observation    │
+                         │     Builder      │
+                         └────────┬─────────┘
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │      Brain       │
+                         └────────┬─────────┘
+                                  │
+                    ┌─────────────┴─────────────┐
+                    │                           │
+                    ▼                           ▼
+             ┌─────────────┐             ┌─────────────┐
+             │ Rule Brain  │             │ Future LLM  │
+             │             │             │    Brain    │
+             └──────┬──────┘             └─────────────┘
+                    │
+                    ▼
+             ┌─────────────┐
+             │ ActionIntent│
+             └──────┬──────┘
+                    │
+                    ▼
+             ┌─────────────┐
+             │   Executor  │
+             └──────┬──────┘
+                    │
+                    ▼
+             ┌──────────────────┐
+             │ World state /    │
+             │ social / memory │
+             └──────────────────┘
+```
+
+The key architectural boundary is that brains **choose intents** while the
+executor **performs actions**. A future LLM brain therefore cannot directly
+mutate the world.
+
+## Milestones
+
+### V0.3 — Social System
+
+- Multiple NPCs
+- Social interactions
+- Relationships
+- Direct messaging
 
 ### V0.4 — Memory & Conversation
 
@@ -109,45 +182,36 @@ available opportunities, and social environment.
 - Relationship-aware behavior
 - Relationship consequences
 
-### V0.5 — LLM Brain
+### V0.5 — Structured Agent Runtime
+
+- Runtime event contracts
+- Structured observations
+- Explicit action intents
+- Event bus
+- Pluggable brain interface
+
+### V0.6 — Brain-Driven Simulation
+
+- Rule-based brain
+- Brain-driven agent execution
+- Legacy decision path preserved
+- CLI brain selection
+- Structured observation → brain → action pipeline
+
+### V0.7 — Planned: LLM Brain
 
 Planned:
 
 - LLM-backed reasoning
 - Natural conversations
-- Structured tool calls
-- Long-term memory retrieval
+- Structured tool/action output
+- Memory retrieval
 - Reflection
 - Self-review
 - Personality-preserving prompts
+- Provider abstraction
 
-## Current Milestone — V0.4.2
-
-### Relationship Consequences
-
-Nexora NPC relationships now have consequences.
-
-NPC interactions can modify:
-
-- Trust
-- Respect
-- Familiarity
-
-Helpful interactions can increase trust and respect.
-
-Unhelpful interactions can decrease trust.
-
-Relationship values are bounded between 0 and 1.
-
-This creates the first social feedback loop:
-
-NPC action
-→ conversation
-→ outcome
-→ relationship change
-→ future social preference
-
-### Engineering Status
+## Engineering Status
 
 - Python 3.14
 - uv
@@ -155,4 +219,18 @@ NPC action
 - Ruff
 - mypy
 - Deterministic simulation
-- 30+ automated tests
+- 76+ automated tests
+- GitHub Actions CI
+
+## Development workflow
+
+Nexora is developed in small, testable milestones.
+
+1. A change is committed to GitHub.
+2. Pull the change locally with git.
+3. Run the pytest, Ruff, and mypy checks.
+4. Run the simulation for behavioral verification.
+5. Report the output.
+6. Failures are diagnosed and the next correction is committed.
+
+This keeps the architecture continuously validated while Nexora grows.
