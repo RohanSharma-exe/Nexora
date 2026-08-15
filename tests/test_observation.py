@@ -2,7 +2,7 @@ from nexora.agent.observation import ObservationBuilder
 from nexora.core.jobs import JobBoard
 from nexora.memory.memory import MemoryStore
 from nexora.models.conversation import MessageIntent
-from nexora.models.job import Job
+from nexora.models.job import Job, JobDifficulty
 from nexora.models.npc import NPC, Goal
 from nexora.social import SocialSystem
 
@@ -209,6 +209,47 @@ def test_observation_contains_contacts() -> None:
     )
 
     assert observation.contacts == ("bob",)
+
+
+def test_observation_contains_job_scores() -> None:
+    job_board = JobBoard(
+        [
+            Job(
+                id="easy-job",
+                title="Easy Task",
+                description="An easy task.",
+                payment=1000.0,
+                required_skills=["python"],
+                difficulty=JobDifficulty.EASY,
+            ),
+            Job(
+                id="hard-job",
+                title="Hard Task",
+                description="A hard task.",
+                payment=3000.0,
+                required_skills=["python"],
+                difficulty=JobDifficulty.HARD,
+            ),
+        ]
+    )
+    npc = create_npc()
+    social = SocialSystem(job_board=job_board)
+    memory = MemoryStore()
+
+    builder = ObservationBuilder(
+        job_board=job_board,
+        social=social,
+        memory=memory,
+    )
+
+    observation = builder.build(
+        npc=npc,
+        tick=1,
+    )
+    scores = dict(observation.available_job_scores)
+
+    assert scores["easy-job"] == 1000.0
+    assert scores["hard-job"] == 3600.0
 
 
 def test_observation_is_immutable() -> None:
