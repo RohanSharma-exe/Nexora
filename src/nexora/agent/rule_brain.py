@@ -25,13 +25,13 @@ class RuleBasedBrain(Brain):
             )
 
         if observation.goals and "complete_job" in actions:
-            target_id = observation.available_jobs[0] if observation.available_jobs else None
+            target_id = self._best_job(observation)
 
             return ActionIntent(
                 actor_id=observation.subject_id,
                 action_type=ActionType.COMPLETE_JOB,
                 target_id=target_id,
-                reasoning="Progress an active goal using the best available job.",
+                reasoning="Progress an active goal using the highest-value available job.",
             )
 
         if "wait" in actions:
@@ -45,4 +45,17 @@ class RuleBasedBrain(Brain):
             actor_id=observation.subject_id,
             action_type=ActionType.IDLE,
             reasoning="No actionable behavior is available.",
+        )
+
+    @staticmethod
+    def _best_job(observation: Observation) -> str | None:
+        """Return the ID of the highest-scoring observed job."""
+
+        if not observation.available_jobs:
+            return None
+
+        scores = dict(observation.available_job_scores)
+        return max(
+            observation.available_jobs,
+            key=lambda job_id: scores.get(job_id, 0.0),
         )
