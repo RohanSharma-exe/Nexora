@@ -130,9 +130,7 @@ def _load_reddit_posts(subreddit: str, limit: int) -> list[RedditPost]:
                 max_results=limit,
             )
         except Exception as exc:
-            raise RuntimeError(
-                f"Reddit RSS failed and Tavily fallback failed: {exc}"
-            ) from exc
+            raise RuntimeError(f"Reddit RSS failed and Tavily fallback failed: {exc}") from exc
 
         posts: list[RedditPost] = []
         for result in results:
