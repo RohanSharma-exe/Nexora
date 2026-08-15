@@ -21,14 +21,16 @@ independent NPCs with:
 - Structured observations
 - Explicit action intents
 - Job-value evaluation inside the observation layer
+- LLM-backed decision making
+- Provider abstraction for multiple LLM vendors
 
 The long-term goal is to create NPCs that don't simply respond to a user,
 but behave like independent inhabitants of an Internet-based world.
 
 ---
 
-**Version:** V0.6.2  
-**Milestone:** Brain-driven simulation
+**Version:** V0.7  
+**Milestone:** Multi-provider LLM brain
 
 ## Current capabilities
 
@@ -57,9 +59,16 @@ but behave like independent inhabitants of an Internet-based world.
 - Job-value scores exposed to brains
 - Pluggable NPC brain interface
 - Deterministic rule-based brain
-- Rule brain selects the highest-value available job
 - Brain-driven action execution
-- Legacy decision engine preserved
+- Provider-agnostic LLM brain
+- Structured LLM action schema
+- LLM action validation and safe target repair
+- NVIDIA provider
+- Gemini provider
+- Groq provider
+- Mistral provider
+- Tavily research tool
+- `.env` configuration for local API keys
 - Automated tests
 - Ruff linting/formatting
 - Mypy type checking
@@ -73,16 +82,31 @@ Install dependencies with uv:
 uv sync
 ```
 
-Run the existing simulation:
+Run the deterministic simulation:
 
 ```cmd
 uv run nexora simulate --ticks 5
 ```
 
-Run the simulation through the rule-based brain:
+Run through the rule-based brain:
 
 ```cmd
 uv run nexora simulate --ticks 5 --brain rule
+```
+
+Run through the local deterministic LLM-provider contract:
+
+```cmd
+uv run nexora simulate --ticks 5 --brain rule-llm
+```
+
+Run with a remote LLM provider:
+
+```cmd
+uv run nexora simulate --ticks 3 --brain nvidia
+uv run nexora simulate --ticks 3 --brain gemini
+uv run nexora simulate --ticks 3 --brain groq
+uv run nexora simulate --ticks 3 --brain mistral
 ```
 
 Run the complete test suite:
@@ -97,6 +121,29 @@ Run quality checks:
 uv run ruff check src tests
 uv run ruff format --check src tests
 uv run mypy src
+```
+
+## Environment configuration
+
+Create a local `.env` from `.env.example` and keep real API keys out of Git.
+Nexora loads the file at application startup.
+
+Example model configuration:
+
+```env
+NVIDIA_API_KEY=
+NVIDIA_MODEL=meta/llama-3.3-70b-instruct
+
+GEMINI_API_KEY=
+GEMINI_MODEL=gemini-2.5-flash
+
+GROQ_API_KEY=
+GROQ_MODEL=openai/gpt-oss-120b
+
+MISTRAL_API_KEY=
+MISTRAL_MODEL=mistral-large-latest
+
+TAVILY_API_KEY=
 ```
 
 ## Example NPCs
@@ -132,53 +179,63 @@ available opportunities, and social environment.
                          │     Builder      │
                          └────────┬─────────┘
                                   │
-                     ┌────────────┴────────────┐
-                     │                         │
-                     ▼                         ▼
-              ┌─────────────┐          ┌──────────────┐
-              │ World facts │          │ Job scoring  │
-              │ goals/jobs/ │          │ payment +    │
-              │ social/etc. │          │ difficulty   │
-              └──────┬──────┘          └──────┬───────┘
-                     └────────────┬────────────┘
-                                  ▼
-                         ┌──────────────────┐
-                         │      Brain       │
-                         └────────┬─────────┘
-                                  │
                     ┌─────────────┴─────────────┐
                     │                           │
                     ▼                           ▼
-             ┌─────────────┐             ┌─────────────┐
-             │ Rule Brain  │             │ Future LLM  │
-             │             │             │    Brain    │
-             └──────┬──────┘             └─────────────┘
-                    │
-                    ▼
-             ┌─────────────┐
-             │ ActionIntent│
-             └──────┬──────┘
-                    │
-                    ▼
-             ┌─────────────┐
-             │   Executor  │
-             └──────┬──────┘
-                    │
-                    ▼
-             ┌──────────────────┐
-             │ World state /    │
-             │ social / memory │
-             └──────────────────┘
+             ┌─────────────┐          ┌──────────────┐
+             │ World facts │          │ Job scoring  │
+             │ goals/jobs/ │          │ payment +    │
+             │ social/etc. │          │ difficulty   │
+             └──────┬──────┘          └──────┬───────┘
+                    └────────────┬────────────┘
+                                 ▼
+                        ┌──────────────────┐
+                        │      Brain       │
+                        └────────┬─────────┘
+                                 │
+               ┌─────────────────┼────────────────────┐
+               │                 │                    │
+               ▼                 ▼                    ▼
+        ┌─────────────┐   ┌──────────────┐    ┌──────────────┐
+        │  Rule Brain │   │   LLM Brain  │    │ Rule LLM     │
+        │ deterministic│  │ provider     │    │ Provider     │
+        └──────┬──────┘   │ abstraction  │    └──────────────┘
+               │          └──────┬───────┘
+               │                 │
+               │        ┌────────┼────────┬────────┐
+               │        │        │        │        │
+               │        ▼        ▼        ▼        ▼
+               │     NVIDIA   Gemini    Groq    Mistral
+               │
+               └─────────────────┬──────────────────────┘
+                                 ▼
+                         ┌──────────────────┐
+                         │  ActionIntent    │
+                         │ validation/repair│
+                         └────────┬─────────┘
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │     Executor     │
+                         └────────┬─────────┘
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │ World state /    │
+                         │ social / memory  │
+                         └──────────────────┘
 ```
 
 The key architectural boundary is that brains **choose intents** while the
-executor **performs actions**. A future LLM brain therefore cannot directly
-mutate the world.
+executor **performs actions**. LLMs therefore cannot directly mutate the world.
 
-The observation layer also keeps world-state perception separate from
-reasoning. Brains receive job IDs and normalized job-value scores rather than
-reaching directly into the job board. This makes it easier to replace the rule
-brain with an LLM brain later without coupling the LLM to simulation internals.
+LLM providers return a structured action, which is validated against the
+observation before execution. Missing job targets may be repaired only from
+already-observed job IDs and scores; invented or unavailable targets remain
+rejected.
+
+Tavily is kept separate from the LLM provider interface because it is a web
+research tool rather than a reasoning model.
 
 ## Milestones
 
@@ -218,19 +275,32 @@ brain with an LLM brain later without coupling the LLM to simulation internals.
 - Structured job-value signals
 - Deterministic job prioritization
 
-### V0.7 — Planned: LLM Brain
+### V0.7 — Multi-Provider LLM Brain
+
+- Provider-agnostic LLM brain
+- Structured LLM action schema
+- Strict action validation
+- Safe missing-target repair
+- Environment-based API key loading
+- NVIDIA provider
+- Gemini provider
+- Groq provider
+- Mistral provider
+- Tavily research tool
+- Deterministic mock/rule provider for testing
+
+### V0.8 — Planned: Autonomous Internet NPCs
 
 Planned:
 
-- LLM-backed reasoning
-- Natural conversations
-- Structured tool/action output
-- Memory retrieval
-- Reflection
-- Self-review
-- Personality-preserving prompts
-- Provider abstraction
-- Configurable model selection
+- Memory retrieval and long-term memory
+- Tool-use loops
+- Web research during decisions
+- Reflection and self-review
+- Personality persistence
+- Provider fallback/routing
+- Event-driven background simulation
+- Real Internet activities and services
 
 ## Engineering Status
 
@@ -240,7 +310,7 @@ Planned:
 - Ruff
 - mypy
 - Deterministic simulation
-- 77+ automated tests
+- 100+ automated tests
 - GitHub Actions CI
 
 ## Development workflow
