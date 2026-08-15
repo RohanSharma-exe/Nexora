@@ -60,6 +60,7 @@ class ObservationBuilder:
         available_job_scores = tuple(
             (job.id, self._job_score(job.payment, job.difficulty.value)) for job in suitable_jobs
         )
+        available_job_risks = tuple((job.id, job.risk) for job in suitable_jobs)
 
         available_actions = self._available_actions(
             npc=npc,
@@ -84,6 +85,7 @@ class ObservationBuilder:
             available_actions=available_actions,
             available_jobs=available_jobs,
             available_job_scores=available_job_scores,
+            available_job_risks=available_job_risks,
         )
 
     def _available_actions(
