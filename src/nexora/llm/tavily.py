@@ -3,7 +3,7 @@
 import os
 from typing import Any
 
-from tavily import TavilyClient
+from tavily import TavilyClient  # type: ignore[import-untyped]
 
 
 class TavilyResearchTool:
