@@ -49,6 +49,7 @@ class RedditRSSClient:
             f"https://old.reddit.com/r/{name}/hot/.rss?{query}",
         )
         last_error: Exception | None = None
+        payload: bytes | None = None
 
         for url in urls:
             for attempt in range(2):
@@ -56,7 +57,10 @@ class RedditRSSClient:
                     url,
                     headers={
                         "Accept": "application/atom+xml,application/xml;q=0.9,*/*;q=0.8",
-                        "User-Agent": "Nexora/0.7 Reddit discovery demo (+https://github.com/RohanSharma-exe/Nexora)",
+                        "User-Agent": (
+                            "Nexora/0.7 Reddit discovery demo "
+                            "(+https://github.com/RohanSharma-exe/Nexora)"
+                        ),
                     },
                 )
                 try:
@@ -76,13 +80,8 @@ class RedditRSSClient:
                 except Exception as exc:
                     last_error = exc
                     break
-            else:
-                continue
-
-            if "payload" in locals():
+            if payload is not None:
                 break
-        else:
-            payload = None
 
         if payload is None:
             detail = f": {last_error}" if last_error else ""
