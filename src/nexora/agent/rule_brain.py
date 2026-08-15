@@ -20,14 +20,18 @@ class RuleBasedBrain(Brain):
             return ActionIntent(
                 actor_id=observation.subject_id,
                 action_type=ActionType.SEND_MESSAGE,
+                target_id=(observation.contacts[0] if observation.contacts else None),
                 reasoning="Respond to an incoming event.",
             )
 
         if observation.goals and "complete_job" in actions:
+            target_id = observation.available_jobs[0] if observation.available_jobs else None
+
             return ActionIntent(
                 actor_id=observation.subject_id,
                 action_type=ActionType.COMPLETE_JOB,
-                reasoning="Progress an active goal.",
+                target_id=target_id,
+                reasoning="Progress an active goal using the best available job.",
             )
 
         if "wait" in actions:

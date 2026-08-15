@@ -100,6 +100,7 @@ def test_observation_contains_suitable_job_action() -> None:
     )
 
     assert "complete_job" in observation.available_actions
+    assert observation.available_jobs == ("job-1",)
 
 
 def test_observation_excludes_completed_goals() -> None:

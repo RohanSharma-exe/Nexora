@@ -30,7 +30,10 @@ class ObservationBuilder:
         goals = tuple(goal.description for goal in npc.goals if not goal.completed)
 
         events = tuple(
-            self._format_message(message.sender_id, message.content)
+            self._format_message(
+                message.sender_id,
+                message.content,
+            )
             for message in self.social.inbox(
                 npc.id,
                 unprocessed_only=True,
@@ -41,10 +44,14 @@ class ObservationBuilder:
 
         contacts = tuple(self.social.ranked_contacts(npc.id))
 
+        available_jobs = tuple(
+            job.id for job in self.job_board.available() if job.is_suitable_for(npc.skills)
+        )
+
         available_actions = self._available_actions(
             npc=npc,
             has_events=bool(events),
-            has_jobs=self._has_suitable_jobs(npc),
+            has_jobs=bool(available_jobs),
             has_contacts=bool(contacts),
         )
 
@@ -56,12 +63,8 @@ class ObservationBuilder:
             goals=goals,
             contacts=contacts,
             available_actions=available_actions,
+            available_jobs=available_jobs,
         )
-
-    def _has_suitable_jobs(self, npc: NPC) -> bool:
-        """Return whether a suitable open job exists."""
-
-        return any(job.is_suitable_for(npc.skills) for job in self.job_board.available())
 
     def _available_actions(
         self,
