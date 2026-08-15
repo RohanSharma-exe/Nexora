@@ -12,7 +12,6 @@ from nexora.llm.tavily import TavilyResearchTool
 from nexora.reddit.client import RedditPost
 from nexora.reddit.models import DiscoveryResult, Opportunity, OpportunityReport
 
-
 DISCOVERY_PROMPT = """You are Nexora, an autonomous startup opportunity discovery agent.
 
 Analyze the supplied Reddit posts as market signals, not as a list of topics.

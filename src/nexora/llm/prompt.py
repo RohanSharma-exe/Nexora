@@ -1,6 +1,7 @@
 """Prompt construction shared by remote LLM providers."""
 
 import json
+
 from nexora.models.runtime import Observation
 
 

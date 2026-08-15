@@ -9,7 +9,6 @@ from nexora.llm.nvidia_provider import NVIDIAProvider
 from nexora.llm.tavily import TavilyResearchTool
 from nexora.models.runtime import ActionType, Observation
 
-
 OBSERVATION = Observation(
     subject_id="alice",
     tick=1,
