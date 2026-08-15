@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import re
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -36,22 +38,55 @@ class RedditRSSClient:
         self.timeout = timeout
 
     def hot(self, subreddit: str, *, limit: int = 10) -> list[RedditPost]:
-        """Return recent posts from a subreddit RSS feed."""
+        """Return recent posts from a subreddit RSS feed with transient retry handling."""
         name = subreddit.strip().lstrip("r/").strip("/")
         if not name:
             raise ValueError("Subreddit must not be empty.")
         limit = max(1, min(limit, 25))
         query = urllib.parse.urlencode({"limit": limit})
-        url = f"https://www.reddit.com/r/{name}/hot/.rss?{query}"
-        request = urllib.request.Request(
-            url,
-            headers={"User-Agent": "Nexora/0.7 Reddit discovery demo"},
+        urls = (
+            f"https://www.reddit.com/r/{name}/hot/.rss?{query}",
+            f"https://old.reddit.com/r/{name}/hot/.rss?{query}",
         )
-        try:
-            with urllib.request.urlopen(request, timeout=self.timeout) as response:
-                payload = response.read()
-        except Exception as exc:
-            raise RuntimeError(f"Could not read Reddit RSS for r/{name}: {exc}") from exc
+        last_error: Exception | None = None
+
+        for url in urls:
+            for attempt in range(2):
+                request = urllib.request.Request(
+                    url,
+                    headers={
+                        "Accept": "application/atom+xml,application/xml;q=0.9,*/*;q=0.8",
+                        "User-Agent": "Nexora/0.7 Reddit discovery demo (+https://github.com/RohanSharma-exe/Nexora)",
+                    },
+                )
+                try:
+                    with urllib.request.urlopen(request, timeout=self.timeout) as response:
+                        payload = response.read()
+                    break
+                except urllib.error.HTTPError as exc:
+                    last_error = exc
+                    if exc.code != 429 or attempt == 1:
+                        break
+                    retry_after = exc.headers.get("Retry-After")
+                    try:
+                        delay = min(float(retry_after or "1"), 5.0)
+                    except ValueError:
+                        delay = 1.0
+                    time.sleep(delay)
+                except Exception as exc:
+                    last_error = exc
+                    break
+            else:
+                continue
+
+            if "payload" in locals():
+                break
+        else:
+            payload = None
+
+        if payload is None:
+            detail = f": {last_error}" if last_error else ""
+            raise RuntimeError(f"Could not read Reddit RSS for r/{name}{detail}") from last_error
 
         root = ET.fromstring(payload)
         namespace = {"atom": "http://www.w3.org/2005/Atom"}
