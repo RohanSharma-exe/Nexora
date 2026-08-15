@@ -4,7 +4,6 @@ import json
 
 from nexora.models.runtime import Observation
 
-
 SYSTEM_PROMPT = """You are the decision-making brain of an NPC in Nexora.
 Choose exactly one action from the available actions.
 Return only the requested structured action.
