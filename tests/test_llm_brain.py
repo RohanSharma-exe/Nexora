@@ -21,7 +21,8 @@ def make_observation() -> Observation:
         tick=1,
         goals=("Earn ₹5000",),
         available_actions=("complete_job", "wait"),
-        available_jobs=("job-1",),
+        available_jobs=("job-1", "job-2"),
+        available_job_scores=(("job-1", 10.0), ("job-2", 20.0)),
     )
 
 
@@ -38,6 +39,23 @@ def test_llm_brain_delegates_to_provider() -> None:
     result = brain.decide(observation)
 
     assert result == intent
+
+
+def test_llm_brain_repairs_missing_job_target() -> None:
+    observation = make_observation()
+    intent = ActionIntent(
+        actor_id="alice",
+        action_type=ActionType.COMPLETE_JOB,
+        target_id=None,
+        reasoning="Progress the active goal.",
+    )
+
+    brain = LLMBrain(FakeProvider(intent))
+
+    result = brain.decide(observation)
+
+    assert result.target_id == "job-2"
+    assert "highest observed job score" in result.reasoning
 
 
 def test_llm_brain_rejects_wrong_actor() -> None:
