@@ -2,6 +2,7 @@ import typer
 from rich.console import Console
 from rich.panel import Panel
 
+from nexora.config import load_environment
 from nexora.core.world import World
 from nexora.models.job import Job, JobDifficulty
 from nexora.models.npc import NPC, Goal, Personality
@@ -239,6 +240,7 @@ def version() -> None:
 def main() -> None:
     """CLI entry point."""
 
+    load_environment()
     app()
 
 
