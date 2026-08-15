@@ -44,7 +44,7 @@ class FakeMistralClient:
             content='{"action":"wait","target_id":null,"content":null,"reasoning":"rest"}'
         )
         self.chat = SimpleNamespace(
-            complete=lambda **_: SimpleNamespace(choices=[SimpleNamespace(message=message)])
+            parse=lambda **_: SimpleNamespace(choices=[SimpleNamespace(message=message)])
         )
 
 
