@@ -5,9 +5,12 @@ description = "An autonomous simulated internet society powered by AI agents."
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "google-genai>=1.30",
+    "mistralai>=1.9",
     "openai>=1.109.0",
     "pydantic>=2.11",
     "rich>=14.0",
+    "tavily-python>=0.7",
     "typer>=0.27.1",
 ]
 
