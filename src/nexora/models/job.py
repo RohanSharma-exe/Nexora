@@ -42,4 +42,7 @@ class Job(BaseModel):
 
         available_skills = {skill.lower() for skill in skills}
 
-        return all(required_skill.lower() in available_skills for required_skill in self.required_skills)
+        return all(
+            required_skill.lower() in available_skills
+            for required_skill in self.required_skills
+        )
