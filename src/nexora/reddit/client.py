@@ -51,9 +51,7 @@ class RedditRSSClient:
             with urllib.request.urlopen(request, timeout=self.timeout) as response:
                 payload = response.read()
         except Exception as exc:
-            raise RuntimeError(
-                f"Could not read Reddit RSS for r/{name}: {exc}"
-            ) from exc
+            raise RuntimeError(f"Could not read Reddit RSS for r/{name}: {exc}") from exc
 
         root = ET.fromstring(payload)
         namespace = {"atom": "http://www.w3.org/2005/Atom"}
