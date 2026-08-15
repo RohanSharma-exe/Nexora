@@ -1,13 +1,16 @@
+import os
+
 import typer
 from rich.console import Console
 from rich.panel import Panel
 
 from nexora.config import load_environment
 from nexora.core.world import World
+from nexora.llm.tavily import TavilyResearchTool
 from nexora.models.job import Job, JobDifficulty
 from nexora.models.npc import NPC, Goal, Personality
 from nexora.reddit.agent import create_discovery_agent
-from nexora.reddit.client import RedditRSSClient
+from nexora.reddit.client import RedditPost, RedditRSSClient
 from nexora.reddit.models import DiscoveryResult
 from nexora.reddit.simulation import build_opportunity_world
 from nexora.simulation.engine import SimulationEngine, create_brain
@@ -110,6 +113,53 @@ def create_demo_world() -> World:
     return world
 
 
+def _load_reddit_posts(subreddit: str, limit: int) -> list[RedditPost]:
+    """Load Reddit posts, falling back to Tavily when Reddit rate-limits RSS."""
+    try:
+        return RedditRSSClient().hot(subreddit, limit=limit)
+    except RuntimeError as rss_error:
+        if not os.getenv("TAVILY_API_KEY"):
+            raise
+
+        console.print(
+            "[yellow]Reddit RSS is rate-limited; falling back to Tavily Reddit search.[/yellow]"
+        )
+        try:
+            results = TavilyResearchTool().search(
+                f"site:reddit.com/r/{subreddit} startup problems pain points",
+                max_results=limit,
+            )
+        except Exception as exc:
+            raise RuntimeError(
+                f"Reddit RSS failed and Tavily fallback failed: {exc}"
+            ) from exc
+
+        posts: list[RedditPost] = []
+        for result in results:
+            url = str(result.get("url", "")).strip()
+            if "reddit.com/r/" not in url:
+                continue
+            posts.append(
+                RedditPost(
+                    subreddit=subreddit,
+                    title=str(result.get("title", "Reddit discussion")).strip(),
+                    url=url,
+                    author="unknown",
+                    score=0,
+                    published="",
+                    text=str(result.get("content", "")).strip(),
+                )
+            )
+            if len(posts) >= limit:
+                break
+
+        if not posts:
+            raise RuntimeError(
+                f"Reddit RSS failed ({rss_error}) and Tavily returned no Reddit posts."
+            ) from rss_error
+        return posts
+
+
 def _print_opportunities(result: DiscoveryResult) -> None:
     """Print a compact discovery report."""
     for index, opportunity in enumerate(result.opportunities, start=1):
@@ -174,8 +224,7 @@ def simulate(
         current_hour = world.hour
         results = engine.tick()
         console.print(
-            f"\n[bold cyan]Tick {tick + 1}[/bold cyan] — "
-            f"Day {current_day}, {current_hour:02d}:00"
+            f"\n[bold cyan]Tick {tick + 1}[/bold cyan] — Day {current_day}, {current_hour:02d}:00"
         )
         for result in results:
             npc = world.get_npc(result.npc_id)
@@ -220,7 +269,7 @@ def discover(
         )
     )
     try:
-        reddit_posts = RedditRSSClient().hot(subreddit, limit=posts)
+        reddit_posts = _load_reddit_posts(subreddit, posts)
         result = create_discovery_agent(research=research).discover(
             subreddit,
             reddit_posts,
@@ -243,7 +292,7 @@ def simulate_reddit(
 ) -> None:
     """Discover Reddit opportunities, then let NPC agents compete over them."""
     try:
-        reddit_posts = RedditRSSClient().hot(subreddit, limit=posts)
+        reddit_posts = _load_reddit_posts(subreddit, posts)
         discovery = create_discovery_agent(research=research).discover(
             subreddit,
             reddit_posts,
