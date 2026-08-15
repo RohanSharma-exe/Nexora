@@ -76,8 +76,7 @@ class RedditOpportunityAgent:
             raise ValueError(f"No Reddit posts were returned from r/{subreddit}.")
 
         material = "\n\n".join(
-            f"POST {index}:\nTitle: {post.title}\nURL: {post.url}\n"
-            f"Text: {post.text[:1200]}"
+            f"POST {index}:\nTitle: {post.title}\nURL: {post.url}\nText: {post.text[:1200]}"
             for index, post in enumerate(posts, start=1)
         )
         response = self.client.chat.completions.create(
