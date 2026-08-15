@@ -5,7 +5,7 @@ from rich.panel import Panel
 from nexora.core.world import World
 from nexora.models.job import Job, JobDifficulty
 from nexora.models.npc import NPC, Goal, Personality
-from nexora.simulation.engine import SimulationEngine
+from nexora.simulation.engine import SimulationEngine, create_brain
 
 app = typer.Typer(
     name="nexora",
@@ -135,15 +135,36 @@ def simulate(
         min=1,
         help="Number of simulation ticks.",
     ),
+    brain: str | None = typer.Option(
+        None,
+        "--brain",
+        help="Brain implementation to use. Available: rule",
+    ),
 ) -> None:
     """Run a Nexora simulation."""
 
     world = create_demo_world()
-    engine = SimulationEngine(world)
+
+    selected_brain = None
+
+    if brain is not None:
+        try:
+            selected_brain = create_brain(brain)
+        except ValueError as exc:
+            raise typer.BadParameter(str(exc)) from exc
+
+    engine = SimulationEngine(
+        world,
+        brain=selected_brain,
+    )
+
+    version_label = (
+        "NEXORA V0.6.2 — Rule Brain" if brain == "rule" else "NEXORA V0.6.2 — Legacy Brain"
+    )
 
     console.print(
         Panel.fit(
-            "[bold]NEXORA V0.3[/bold]\nMultiple NPCs + Social System",
+            f"[bold]{version_label}[/bold]\nAutonomous Internet Society",
             border_style="cyan",
         )
     )
@@ -212,7 +233,7 @@ def simulate(
 def version() -> None:
     """Show the Nexora version."""
 
-    console.print("Nexora 0.3.0")
+    console.print("Nexora 0.6.2")
 
 
 def main() -> None:
