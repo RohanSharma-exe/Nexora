@@ -1,5 +1,7 @@
 """OpenAI Responses API provider for Nexora NPC reasoning."""
 
+from dataclasses import asdict
+
 from openai import OpenAI
 
 from nexora.llm.provider import LLMProvider
@@ -36,11 +38,7 @@ class OpenAILLMProvider(LLMProvider):
             actor_id=observation.subject_id,
             action_type=action.action,
             target_id=action.target_id,
-            payload=(
-                {"content": action.content}
-                if action.content is not None
-                else {}
-            ),
+            payload={"content": action.content} if action.content is not None else {},
             reasoning=action.reasoning,
         )
 
@@ -60,7 +58,7 @@ class OpenAILLMProvider(LLMProvider):
             f"Skills: {list(observation.skills)}\n"
             f"Personality: {dict(observation.personality)}\n"
             f"Goals: {list(observation.goals)}\n"
-            f"Goal details: {[goal.model_dump() for goal in observation.goal_details]}\n"
+            f"Goal details: {[asdict(goal) for goal in observation.goal_details]}\n"
             f"Memories: {list(observation.memories)}\n"
             f"Events: {list(observation.events)}\n"
             f"Contacts: {list(observation.contacts)}\n"
