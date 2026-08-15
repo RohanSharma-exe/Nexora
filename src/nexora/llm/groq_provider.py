@@ -18,7 +18,7 @@ class GroqProvider(OpenAICompatibleLLMProvider):
         if not key:
             raise ValueError("GROQ_API_KEY is not configured.")
 
-        selected_model = model or os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
+        selected_model = model or os.getenv("GROQ_MODEL") or "openai/gpt-oss-120b"
 
         super().__init__(
             api_key=key,
