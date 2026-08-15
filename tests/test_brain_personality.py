@@ -39,6 +39,10 @@ def make_observation(
             ("safe-job", 2200.0),
             ("risky-job", 4200.0),
         ),
+        available_job_risks=(
+            ("safe-job", 0.05),
+            ("risky-job", 0.90),
+        ),
     )
 
 
