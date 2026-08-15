@@ -3,7 +3,7 @@
 from nexora.core.jobs import JobBoard
 from nexora.memory.memory import MemoryStore
 from nexora.models.npc import NPC
-from nexora.models.runtime import Observation
+from nexora.models.runtime import GoalObservation, Observation
 from nexora.social import SocialSystem
 
 
@@ -28,6 +28,16 @@ class ObservationBuilder:
         """Build an immutable observation from the current world state."""
 
         goals = tuple(goal.description for goal in npc.goals if not goal.completed)
+        goal_details = tuple(
+            GoalObservation(
+                description=goal.description,
+                priority=goal.priority,
+                progress=goal.progress,
+                target_amount=goal.target_amount,
+            )
+            for goal in npc.goals
+            if not goal.completed
+        )
 
         events = tuple(
             self._format_message(
@@ -61,9 +71,15 @@ class ObservationBuilder:
         return Observation(
             subject_id=npc.id,
             tick=tick,
+            money=npc.money,
+            energy=npc.energy,
+            reputation=npc.reputation,
+            skills=tuple(npc.skills),
+            personality=tuple(sorted(npc.personality.model_dump().items())),
             events=events,
             memories=memories,
             goals=goals,
+            goal_details=goal_details,
             contacts=contacts,
             available_actions=available_actions,
             available_jobs=available_jobs,
