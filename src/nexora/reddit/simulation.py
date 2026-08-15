@@ -2,7 +2,7 @@
 
 from nexora.core.world import World
 from nexora.models.job import Job, JobDifficulty
-from nexora.models.npc import Goal, NPC, Personality
+from nexora.models.npc import NPC, Goal, Personality
 from nexora.reddit.models import Opportunity
 
 
