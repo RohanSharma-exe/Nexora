@@ -67,25 +67,31 @@ class RuleBasedBrain(Brain):
 
         goal_priority = goal.priority if goal is not None else 0.5
         progress_ratio = cls._goal_progress_ratio(goal)
+        urgency = (
+            goal_priority * 0.30
+            + ambition * 0.20
+            + greed * 0.20
+            + (1.0 - progress_ratio) * 0.20
+            + (1.0 - patience) * 0.10
+        )
 
         def utility(job_id: str) -> float:
             base_score = scores.get(job_id, 0.0)
-            normalized_score = min(base_score / 5000.0, 1.0)
             job_risk = risks.get(job_id, 0.5)
+            risk_distance = abs(job_risk - risk_tolerance)
 
-            urgency = (
-                goal_priority * 0.30
-                + ambition * 0.20
-                + greed * 0.20
-                + (1.0 - progress_ratio) * 0.20
-                + (1.0 - patience) * 0.10
+            value_component = base_score * (
+                0.50
+                + 0.20 * greed
+                + 0.15 * ambition
             )
+            urgency_component = urgency * 500.0
+            risk_component = -risk_distance * 5000.0
 
             return (
-                base_score * 0.60
-                + urgency * 1000.0
-                + normalized_score * risk_tolerance * 500.0
-                - job_risk * (1.0 - risk_tolerance) * 3000.0
+                value_component
+                + urgency_component
+                + risk_component
             )
 
         return max(observation.available_jobs, key=utility)
