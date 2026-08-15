@@ -27,7 +27,11 @@ class ObservationBuilder:
     ) -> Observation:
         """Build an immutable observation from the current world state."""
 
-        goals = tuple(goal.description for goal in npc.goals if not goal.completed)
+        goals = tuple(
+            goal.description
+            for goal in npc.goals
+            if not goal.completed
+        )
 
         events = tuple(
             self._format_message(
@@ -40,15 +44,26 @@ class ObservationBuilder:
             )
         )
 
-        memories = tuple(memory.content for memory in self.memory.recent(limit=5))
+        memories = tuple(
+            memory.content
+            for memory in self.memory.recent(limit=5)
+        )
         contacts = tuple(self.social.ranked_contacts(npc.id))
 
         suitable_jobs = tuple(
-            job for job in self.job_board.available() if job.is_suitable_for(npc.skills)
+            job
+            for job in self.job_board.available()
+            if job.is_suitable_for(npc.skills)
         )
         available_jobs = tuple(job.id for job in suitable_jobs)
         available_job_scores = tuple(
-            (job.id, self._job_score(job.payment, job.difficulty.value))
+            (
+                job.id,
+                self._job_score(
+                    job.payment,
+                    job.difficulty.value,
+                ),
+            )
             for job in suitable_jobs
         )
 
@@ -85,7 +100,10 @@ class ObservationBuilder:
             "wait",
         ]
 
-        has_active_goal = any(not goal.completed for goal in npc.goals)
+        has_active_goal = any(
+            not goal.completed
+            for goal in npc.goals
+        )
 
         if has_active_goal and has_jobs:
             actions.append("complete_job")
@@ -99,7 +117,10 @@ class ObservationBuilder:
         return tuple(actions)
 
     @staticmethod
-    def _job_score(payment: float, difficulty: str) -> float:
+    def _job_score(
+        payment: float,
+        difficulty: str,
+    ) -> float:
         """Estimate job value without embedding personality into perception."""
 
         difficulty_weight = {
