@@ -28,14 +28,30 @@ class ActionType(StrEnum):
 
 
 @dataclass(frozen=True)
+class GoalObservation:
+    """Read-only representation of an NPC goal."""
+
+    description: str
+    priority: float
+    progress: float
+    target_amount: float | None
+
+
+@dataclass(frozen=True)
 class Observation:
-    """Information currently visible to an NPC."""
+    """Information currently visible to an NPC brain."""
 
     subject_id: str
     tick: int
+    money: float = 0.0
+    energy: float = 1.0
+    reputation: float = 0.5
+    skills: tuple[str, ...] = ()
+    personality: tuple[tuple[str, float], ...] = ()
     events: tuple[str, ...] = ()
     memories: tuple[str, ...] = ()
     goals: tuple[str, ...] = ()
+    goal_details: tuple[GoalObservation, ...] = ()
     contacts: tuple[str, ...] = ()
     available_actions: tuple[str, ...] = ()
     available_jobs: tuple[str, ...] = ()
