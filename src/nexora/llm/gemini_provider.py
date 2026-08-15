@@ -26,7 +26,8 @@ class GeminiProvider(LLMProvider):
         if not key:
             raise ValueError("GEMINI_API_KEY is not configured.")
 
-        self.model = model or os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+        selected_model = model or os.getenv("GEMINI_MODEL") or "gemini-2.5-flash"
+        self.model: str = selected_model
         self.client = client or genai.Client(api_key=key)
 
     def decide(self, observation: Observation) -> ActionIntent:
