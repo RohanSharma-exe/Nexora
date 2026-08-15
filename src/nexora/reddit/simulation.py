@@ -13,9 +13,42 @@ def build_opportunity_world(opportunities: list[Opportunity]) -> World:
 
     world = World()
     personas = [
-        ("maya", "Maya", "Indie Founder", Personality(ambition=0.95, curiosity=0.9, risk_tolerance=0.8, greed=0.7, patience=0.3)),
-        ("arjun", "Arjun", "Product Engineer", Personality(ambition=0.7, curiosity=0.95, risk_tolerance=0.5, greed=0.3, patience=0.7)),
-        ("neha", "Neha", "B2B Operator", Personality(ambition=0.75, curiosity=0.7, risk_tolerance=0.25, greed=0.5, patience=0.85)),
+        (
+            "maya",
+            "Maya",
+            "Indie Founder",
+            Personality(
+                ambition=0.95,
+                curiosity=0.9,
+                risk_tolerance=0.8,
+                greed=0.7,
+                patience=0.3,
+            ),
+        ),
+        (
+            "arjun",
+            "Arjun",
+            "Product Engineer",
+            Personality(
+                ambition=0.7,
+                curiosity=0.95,
+                risk_tolerance=0.5,
+                greed=0.3,
+                patience=0.7,
+            ),
+        ),
+        (
+            "neha",
+            "Neha",
+            "B2B Operator",
+            Personality(
+                ambition=0.75,
+                curiosity=0.7,
+                risk_tolerance=0.25,
+                greed=0.5,
+                patience=0.85,
+            ),
+        ),
     ]
     for npc_id, name, occupation, personality in personas:
         world.add_npc(

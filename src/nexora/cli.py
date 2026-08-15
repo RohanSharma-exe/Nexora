@@ -8,6 +8,7 @@ from nexora.models.job import Job, JobDifficulty
 from nexora.models.npc import NPC, Goal, Personality
 from nexora.reddit.agent import create_discovery_agent
 from nexora.reddit.client import RedditRSSClient
+from nexora.reddit.models import DiscoveryResult
 from nexora.reddit.simulation import build_opportunity_world
 from nexora.simulation.engine import SimulationEngine, create_brain
 
@@ -21,9 +22,7 @@ console = Console()
 
 def create_demo_world() -> World:
     """Create the initial demo world."""
-
     world = World()
-
     alice = NPC(
         id="alice",
         name="Alice",
@@ -38,15 +37,8 @@ def create_demo_world() -> World:
             greed=0.80,
             patience=0.20,
         ),
-        goals=[
-            Goal(
-                description="Earn ₹5000",
-                priority=0.90,
-                target_amount=5000.0,
-            ),
-        ],
+        goals=[Goal(description="Earn ₹5000", priority=0.90, target_amount=5000.0)],
     )
-
     bob = NPC(
         id="bob",
         name="Bob",
@@ -61,15 +53,8 @@ def create_demo_world() -> World:
             greed=0.40,
             patience=0.70,
         ),
-        goals=[
-            Goal(
-                description="Earn ₹3000",
-                priority=0.80,
-                target_amount=3000.0,
-            ),
-        ],
+        goals=[Goal(description="Earn ₹3000", priority=0.80, target_amount=3000.0)],
     )
-
     sarah = NPC(
         id="sarah",
         name="Sarah",
@@ -86,11 +71,9 @@ def create_demo_world() -> World:
         ),
         goals=[],
     )
-
     world.add_npc(alice)
     world.add_npc(bob)
     world.add_npc(sarah)
-
     world.add_job(
         Job(
             id="job-python-api",
@@ -127,7 +110,7 @@ def create_demo_world() -> World:
     return world
 
 
-def _print_opportunities(result: object) -> None:
+def _print_opportunities(result: DiscoveryResult) -> None:
     """Print a compact discovery report."""
     for index, opportunity in enumerate(result.opportunities, start=1):
         console.print(
@@ -147,11 +130,17 @@ def _print_opportunities(result: object) -> None:
 
 @app.command()
 def simulate(
-    ticks: int = typer.Option(5, "--ticks", "-t", min=1, help="Number of simulation ticks."),
+    ticks: int = typer.Option(
+        5,
+        "--ticks",
+        "-t",
+        min=1,
+        help="Number of simulation ticks.",
+    ),
     brain: str | None = typer.Option(
         None,
         "--brain",
-        help="Brain implementation to use. Available: rule, rule-llm, nvidia, gemini, groq, mistral",
+        help="Brain: rule, rule-llm, nvidia, gemini, groq, or mistral.",
     ),
 ) -> None:
     """Run a Nexora simulation."""
@@ -185,7 +174,8 @@ def simulate(
         current_hour = world.hour
         results = engine.tick()
         console.print(
-            f"\n[bold cyan]Tick {tick + 1}[/bold cyan] — Day {current_day}, {current_hour:02d}:00"
+            f"\n[bold cyan]Tick {tick + 1}[/bold cyan] — "
+            f"Day {current_day}, {current_hour:02d}:00"
         )
         for result in results:
             npc = world.get_npc(result.npc_id)
@@ -200,8 +190,8 @@ def simulate(
                 status = "completed" if goal.completed else "active"
                 if goal.target_amount is not None:
                     console.print(
-                        f"  Goal: {goal.description} ({goal.progress:.0f}/{goal.target_amount:.0f}) "
-                        f"[{status}]"
+                        f"  Goal: {goal.description} "
+                        f"({goal.progress:.0f}/{goal.target_amount:.0f}) [{status}]"
                     )
         console.print("\n[bold magenta]Social activity:[/bold magenta]")
         for message in world.social.history:
@@ -252,21 +242,23 @@ def simulate_reddit(
     research: bool = typer.Option(True, "--research/--no-research"),
 ) -> None:
     """Discover Reddit opportunities, then let NPC agents compete over them."""
-    reddit_posts = RedditRSSClient().hot(subreddit, limit=posts)
-    discovery = create_discovery_agent(research=research).discover(
-        subreddit,
-        reddit_posts,
-        research=research,
-    )
-    _print_opportunities(discovery)
+    try:
+        reddit_posts = RedditRSSClient().hot(subreddit, limit=posts)
+        discovery = create_discovery_agent(research=research).discover(
+            subreddit,
+            reddit_posts,
+            research=research,
+        )
+    except (RuntimeError, ValueError) as exc:
+        raise typer.BadParameter(str(exc)) from exc
 
+    _print_opportunities(discovery)
     world = build_opportunity_world(discovery.opportunities)
     try:
         selected_brain = create_brain(brain)
     except ValueError as exc:
         raise typer.BadParameter(str(exc)) from exc
     engine = SimulationEngine(world, brain=selected_brain)
-
     console.print(
         Panel.fit(
             f"[bold]NEXORA — Reddit Simulation ({brain})[/bold]\n"
