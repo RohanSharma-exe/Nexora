@@ -14,12 +14,16 @@ class MockLLMProvider(LLMProvider):
     def decide(self, observation: Observation) -> ActionIntent:
         """Convert the configured structured response into an action intent."""
 
+        payload = (
+            {"content": self.action.content}
+            if self.action.content is not None
+            else {}
+        )
+
         return ActionIntent(
             actor_id=observation.subject_id,
             action_type=self.action.action,
             target_id=self.action.target_id,
-            payload={
-                "content": self.action.content,
-            } if self.action.content is not None else {},
+            payload=payload,
             reasoning=self.action.reasoning,
         )
