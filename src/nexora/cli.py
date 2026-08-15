@@ -138,7 +138,7 @@ def simulate(
     brain: str | None = typer.Option(
         None,
         "--brain",
-        help="Brain implementation to use. Available: rule",
+        help="Brain: rule, rule-llm, nvidia, gemini, groq, or mistral.",
     ),
 ) -> None:
     """Run a Nexora simulation."""
@@ -159,7 +159,7 @@ def simulate(
     )
 
     version_label = (
-        "NEXORA V0.6.2 — Rule Brain" if brain == "rule" else "NEXORA V0.6.2 — Legacy Brain"
+        f"NEXORA V0.6.2 — {brain} Brain" if brain is not None else "NEXORA V0.6.2 — Legacy Brain"
     )
 
     console.print(
