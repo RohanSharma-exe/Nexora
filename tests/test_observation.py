@@ -3,7 +3,7 @@ from nexora.core.jobs import JobBoard
 from nexora.memory.memory import MemoryStore
 from nexora.models.conversation import MessageIntent
 from nexora.models.job import Job, JobDifficulty
-from nexora.models.npc import NPC, Goal, Personality
+from nexora.models.npc import NPC, Goal
 from nexora.social import SocialSystem
 
 
@@ -13,20 +13,11 @@ def create_npc() -> NPC:
         name="Alice",
         occupation="Python Developer",
         skills=["python"],
-        personality=Personality(
-            ambition=0.9,
-            curiosity=0.7,
-            risk_tolerance=0.4,
-            sociability=0.8,
-            greed=0.6,
-            patience=0.3,
-        ),
         goals=[
             Goal(
                 description="Earn ₹5000",
                 priority=1.0,
                 target_amount=5000,
-                progress=1250,
             )
         ],
     )
@@ -90,10 +81,20 @@ def test_observation_contains_active_goals() -> None:
     assert observation.subject_id == "alice"
     assert observation.tick == 10
     assert observation.goals == ("Earn ₹5000",)
+    assert observation.goal_details == (observation.goal_details[0],)
+    goal = observation.goal_details[0]
+    assert goal.description == "Earn ₹5000"
+    assert goal.priority == 1.0
+    assert goal.progress == 0.0
+    assert goal.target_amount == 5000.0
 
 
 def test_observation_contains_npc_state() -> None:
     npc = create_npc()
+    npc.money = 1750.0
+    npc.energy = 0.65
+    npc.reputation = 0.8
+
     social = create_social()
     memory = MemoryStore()
 
@@ -103,24 +104,22 @@ def test_observation_contains_npc_state() -> None:
         memory=memory,
     )
 
-    observation = builder.build(npc=npc, tick=10)
+    observation = builder.build(
+        npc=npc,
+        tick=3,
+    )
 
-    assert observation.money == 1000.0
-    assert observation.energy == 1.0
-    assert observation.reputation == 0.5
+    assert observation.money == 1750.0
+    assert observation.energy == 0.65
+    assert observation.reputation == 0.8
     assert observation.skills == ("python",)
-    assert dict(observation.personality) == {
-        "ambition": 0.9,
-        "curiosity": 0.7,
-        "greed": 0.6,
-        "patience": 0.3,
-        "risk_tolerance": 0.4,
-        "sociability": 0.8,
-    }
 
 
-def test_observation_contains_structured_goal_progress() -> None:
+def test_observation_contains_personality() -> None:
     npc = create_npc()
+    npc.personality.ambition = 0.9
+    npc.personality.greed = 0.2
+
     social = create_social()
     memory = MemoryStore()
 
@@ -130,16 +129,15 @@ def test_observation_contains_structured_goal_progress() -> None:
         memory=memory,
     )
 
-    observation = builder.build(npc=npc, tick=10)
-
-    assert observation.goal_details == (
-        observation.goal_details[0],
+    observation = builder.build(
+        npc=npc,
+        tick=1,
     )
-    goal = observation.goal_details[0]
-    assert goal.description == "Earn ₹5000"
-    assert goal.priority == 1.0
-    assert goal.progress == 1250
-    assert goal.target_amount == 5000
+
+    personality = dict(observation.personality)
+
+    assert personality["ambition"] == 0.9
+    assert personality["greed"] == 0.2
 
 
 def test_observation_contains_suitable_job_action() -> None:
