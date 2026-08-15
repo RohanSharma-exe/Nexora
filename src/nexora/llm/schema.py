@@ -11,6 +11,6 @@ class LLMAction(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     action: ActionType
-    target_id: str | None = None
-    content: str | None = None
-    reasoning: str = Field(default="")
+    target_id: str | None
+    content: str | None
+    reasoning: str = Field()
