@@ -39,6 +39,7 @@ class Observation:
     contacts: tuple[str, ...] = ()
     available_actions: tuple[str, ...] = ()
     available_jobs: tuple[str, ...] = ()
+    available_job_scores: tuple[tuple[str, float], ...] = ()
 
 
 @dataclass(frozen=True)
