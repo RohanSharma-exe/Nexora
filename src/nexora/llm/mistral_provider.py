@@ -1,9 +1,8 @@
 """Mistral-hosted LLM provider."""
 
 import os
+from importlib import import_module
 from typing import Any
-
-from mistralai import Mistral
 
 from nexora.llm.prompt import SYSTEM_PROMPT, build_decision_prompt
 from nexora.llm.provider import LLMProvider
@@ -26,7 +25,11 @@ class MistralProvider(LLMProvider):
             raise ValueError("MISTRAL_API_KEY is not configured.")
 
         self.model = model or os.getenv("MISTRAL_MODEL", "mistral-large-latest")
-        self.client = client or Mistral(api_key=key)
+        if client is not None:
+            self.client = client
+        else:
+            mistral_client = import_module("mistralai.client")
+            self.client = mistral_client.Mistral(api_key=key)
 
     def decide(self, observation: Observation) -> ActionIntent:
         """Generate and validate one structured NPC action."""
