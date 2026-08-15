@@ -43,6 +43,27 @@ def test_brain_prioritizes_goal_progress_when_no_event_exists() -> None:
     assert intent.action_type == ActionType.COMPLETE_JOB
 
 
+def test_brain_selects_highest_value_job() -> None:
+    brain = RuleBasedBrain()
+
+    observation = Observation(
+        subject_id="alice",
+        tick=1,
+        goals=("Earn ₹5000",),
+        available_actions=("complete_job", "wait"),
+        available_jobs=("cheap-job", "valuable-job"),
+        available_job_scores=(
+            ("cheap-job", 1500.0),
+            ("valuable-job", 4200.0),
+        ),
+    )
+
+    intent = brain.decide(observation)
+
+    assert intent.action_type == ActionType.COMPLETE_JOB
+    assert intent.target_id == "valuable-job"
+
+
 def test_brain_waits_when_no_goal_or_event_exists() -> None:
     brain = RuleBasedBrain()
 
