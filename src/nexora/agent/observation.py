@@ -41,11 +41,15 @@ class ObservationBuilder:
         )
 
         memories = tuple(memory.content for memory in self.memory.recent(limit=5))
-
         contacts = tuple(self.social.ranked_contacts(npc.id))
 
-        available_jobs = tuple(
-            job.id for job in self.job_board.available() if job.is_suitable_for(npc.skills)
+        suitable_jobs = tuple(
+            job for job in self.job_board.available() if job.is_suitable_for(npc.skills)
+        )
+        available_jobs = tuple(job.id for job in suitable_jobs)
+        available_job_scores = tuple(
+            (job.id, self._job_score(job.payment, job.difficulty.value))
+            for job in suitable_jobs
         )
 
         available_actions = self._available_actions(
@@ -64,6 +68,7 @@ class ObservationBuilder:
             contacts=contacts,
             available_actions=available_actions,
             available_jobs=available_jobs,
+            available_job_scores=available_job_scores,
         )
 
     def _available_actions(
@@ -92,6 +97,18 @@ class ObservationBuilder:
             actions.append("send_message")
 
         return tuple(actions)
+
+    @staticmethod
+    def _job_score(payment: float, difficulty: str) -> float:
+        """Estimate job value without embedding personality into perception."""
+
+        difficulty_weight = {
+            "easy": 1.0,
+            "medium": 1.1,
+            "hard": 1.2,
+        }.get(difficulty, 1.0)
+
+        return payment * difficulty_weight
 
     @staticmethod
     def _format_message(
