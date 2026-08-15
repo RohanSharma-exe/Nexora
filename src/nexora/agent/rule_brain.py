@@ -21,11 +21,7 @@ class RuleBasedBrain(Brain):
             return ActionIntent(
                 actor_id=observation.subject_id,
                 action_type=ActionType.SEND_MESSAGE,
-                target_id=(
-                    observation.contacts[0]
-                    if observation.contacts
-                    else None
-                ),
+                target_id=(observation.contacts[0] if observation.contacts else None),
                 reasoning="Respond to an incoming event.",
             )
 
@@ -94,7 +90,7 @@ class RuleBasedBrain(Brain):
             )
 
             return (
-                base_score * (0.50 + normalized_score * 0.10)
+                base_score * 0.60
                 + urgency * 1000.0
                 + risk_preference * 500.0
                 - risk_penalty
@@ -130,7 +126,7 @@ class RuleBasedBrain(Brain):
         scores = dict(observation.available_job_scores)
         value = scores.get(job_id, 0.0)
         normalized = min(value / 5000.0, 1.0)
-        difficulty_risk = max(0.0, normalized - 0.5) * 700.0
+        difficulty_risk = max(0.0, normalized - 0.5) * 1800.0
 
         return difficulty_risk * (1.0 - dict(observation.personality).get("risk_tolerance", 0.5))
 
