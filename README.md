@@ -20,6 +20,7 @@ independent NPCs with:
 - Pluggable decision-making brains
 - Structured observations
 - Explicit action intents
+- Job-value evaluation inside the observation layer
 
 The long-term goal is to create NPCs that don't simply respond to a user,
 but behave like independent inhabitants of an Internet-based world.
@@ -52,8 +53,11 @@ but behave like independent inhabitants of an Internet-based world.
 - Social cooldowns
 - Deterministic simulation
 - Structured NPC observations
+- Suitable-job discovery
+- Job-value scores exposed to brains
 - Pluggable NPC brain interface
 - Deterministic rule-based brain
+- Rule brain selects the highest-value available job
 - Brain-driven action execution
 - Legacy decision engine preserved
 - Automated tests
@@ -128,6 +132,15 @@ available opportunities, and social environment.
                          │     Builder      │
                          └────────┬─────────┘
                                   │
+                     ┌────────────┴────────────┐
+                     │                         │
+                     ▼                         ▼
+              ┌─────────────┐          ┌──────────────┐
+              │ World facts │          │ Job scoring  │
+              │ goals/jobs/ │          │ payment +    │
+              │ social/etc. │          │ difficulty   │
+              └──────┬──────┘          └──────┬───────┘
+                     └────────────┬────────────┘
                                   ▼
                          ┌──────────────────┐
                          │      Brain       │
@@ -161,6 +174,11 @@ available opportunities, and social environment.
 The key architectural boundary is that brains **choose intents** while the
 executor **performs actions**. A future LLM brain therefore cannot directly
 mutate the world.
+
+The observation layer also keeps world-state perception separate from
+reasoning. Brains receive job IDs and normalized job-value scores rather than
+reaching directly into the job board. This makes it easier to replace the rule
+brain with an LLM brain later without coupling the LLM to simulation internals.
 
 ## Milestones
 
@@ -197,6 +215,8 @@ mutate the world.
 - Legacy decision path preserved
 - CLI brain selection
 - Structured observation → brain → action pipeline
+- Structured job-value signals
+- Deterministic job prioritization
 
 ### V0.7 — Planned: LLM Brain
 
@@ -210,6 +230,7 @@ Planned:
 - Self-review
 - Personality-preserving prompts
 - Provider abstraction
+- Configurable model selection
 
 ## Engineering Status
 
@@ -219,7 +240,7 @@ Planned:
 - Ruff
 - mypy
 - Deterministic simulation
-- 76+ automated tests
+- 77+ automated tests
 - GitHub Actions CI
 
 ## Development workflow
