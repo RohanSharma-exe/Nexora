@@ -29,18 +29,12 @@ class LLMBrain(Brain):
             raise ValueError("LLM intent actor does not match the observation subject.")
 
         if intent.action_type.value not in observation.available_actions:
-            raise ValueError(
-                f"Action '{intent.action_type.value}' is not currently available."
-            )
+            raise ValueError(f"Action '{intent.action_type.value}' is not currently available.")
 
         if intent.action_type.value == "complete_job":
             if intent.target_id not in observation.available_jobs:
-                raise ValueError(
-                    f"Job '{intent.target_id}' is not available to this NPC."
-                )
+                raise ValueError(f"Job '{intent.target_id}' is not available to this NPC.")
 
         if intent.action_type.value == "send_message":
             if intent.target_id not in observation.contacts:
-                raise ValueError(
-                    f"Contact '{intent.target_id}' is not known to this NPC."
-                )
+                raise ValueError(f"Contact '{intent.target_id}' is not known to this NPC.")
