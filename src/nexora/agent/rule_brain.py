@@ -56,6 +56,7 @@ class RuleBasedBrain(Brain):
             return None
 
         scores = dict(observation.available_job_scores)
+        risks = dict(observation.available_job_risks)
         goal = cls._primary_goal(observation.goal_details)
         traits = dict(observation.personality)
 
@@ -70,11 +71,7 @@ class RuleBasedBrain(Brain):
         def utility(job_id: str) -> float:
             base_score = scores.get(job_id, 0.0)
             normalized_score = min(base_score / 5000.0, 1.0)
-
-            risk_penalty = cls._risk_penalty(
-                job_id=job_id,
-                observation=observation,
-            )
+            job_risk = risks.get(job_id, 0.5)
 
             urgency = (
                 goal_priority * 0.30
@@ -84,16 +81,11 @@ class RuleBasedBrain(Brain):
                 + (1.0 - patience) * 0.10
             )
 
-            risk_preference = risk_tolerance_adjustment(
-                risk_tolerance,
-                normalized_score,
-            )
-
             return (
                 base_score * 0.60
                 + urgency * 1000.0
-                + risk_preference * 500.0
-                - risk_penalty
+                + normalized_score * risk_tolerance * 500.0
+                - job_risk * (1.0 - risk_tolerance) * 3000.0
             )
 
         return max(observation.available_jobs, key=utility)
@@ -117,20 +109,6 @@ class RuleBasedBrain(Brain):
         return min(goal.progress / goal.target_amount, 1.0)
 
     @staticmethod
-    def _risk_penalty(
-        job_id: str,
-        observation: Observation,
-    ) -> float:
-        """Estimate risk from the observed job score."""
-
-        scores = dict(observation.available_job_scores)
-        value = scores.get(job_id, 0.0)
-        normalized = min(value / 5000.0, 1.0)
-        difficulty_risk = max(0.0, normalized - 0.5) * 1800.0
-
-        return difficulty_risk * (1.0 - dict(observation.personality).get("risk_tolerance", 0.5))
-
-    @staticmethod
     def _job_reason(
         observation: Observation,
         job_id: str | None,
@@ -141,19 +119,12 @@ class RuleBasedBrain(Brain):
         goal = RuleBasedBrain._primary_goal(observation.goal_details)
         goal_text = goal.description if goal is not None else "an active goal"
         traits = dict(observation.personality)
+        risk = dict(observation.available_job_risks).get(job_id, 0.5)
 
         return (
             f"Selected '{job_id}' to progress {goal_text}; "
             f"ambition={traits.get('ambition', 0.5):.2f}, "
             f"greed={traits.get('greed', 0.5):.2f}, "
-            f"risk_tolerance={traits.get('risk_tolerance', 0.5):.2f}."
+            f"risk_tolerance={traits.get('risk_tolerance', 0.5):.2f}, "
+            f"job_risk={risk:.2f}."
         )
-
-
-def risk_tolerance_adjustment(
-    risk_tolerance: float,
-    normalized_job_value: float,
-) -> float:
-    """Reward higher-value opportunities more for risk-tolerant NPCs."""
-
-    return normalized_job_value * (risk_tolerance - 0.5)
