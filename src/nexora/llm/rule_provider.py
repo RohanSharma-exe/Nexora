@@ -1,9 +1,8 @@
 """Deterministic provider used to validate the LLM provider contract."""
 
 from nexora.agent.rule_brain import RuleBasedBrain
-from nexora.models.runtime import ActionIntent, Observation
-
 from nexora.llm.provider import LLMProvider
+from nexora.models.runtime import ActionIntent, Observation
 
 
 class RuleLLMProvider(LLMProvider):
