@@ -2,6 +2,12 @@ from nexora.agent.agent import AgentResult
 from nexora.agent.brain import Brain
 from nexora.agent.rule_brain import RuleBasedBrain
 from nexora.core.world import World
+from nexora.llm.brain import LLMBrain
+from nexora.llm.gemini_provider import GeminiProvider
+from nexora.llm.groq_provider import GroqProvider
+from nexora.llm.mistral_provider import MistralProvider
+from nexora.llm.nvidia_provider import NVIDIAProvider
+from nexora.llm.rule_provider import RuleLLMProvider
 
 
 class SimulationEngine:
@@ -59,4 +65,22 @@ def create_brain(name: str) -> Brain:
     if name == "rule":
         return RuleBasedBrain()
 
-    raise ValueError(f"Unknown brain '{name}'. Supported brains: rule")
+    if name == "rule-llm":
+        return LLMBrain(RuleLLMProvider())
+
+    if name == "nvidia":
+        return LLMBrain(NVIDIAProvider())
+
+    if name == "gemini":
+        return LLMBrain(GeminiProvider())
+
+    if name == "groq":
+        return LLMBrain(GroqProvider())
+
+    if name == "mistral":
+        return LLMBrain(MistralProvider())
+
+    supported = "rule, rule-llm, nvidia, gemini, groq, mistral"
+    raise ValueError(
+        f"Unknown brain '{name}'. Supported brains: {supported}"
+    )
