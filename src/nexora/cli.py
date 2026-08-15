@@ -6,6 +6,9 @@ from nexora.config import load_environment
 from nexora.core.world import World
 from nexora.models.job import Job, JobDifficulty
 from nexora.models.npc import NPC, Goal, Personality
+from nexora.reddit.agent import create_discovery_agent
+from nexora.reddit.client import RedditRSSClient
+from nexora.reddit.simulation import build_opportunity_world
 from nexora.simulation.engine import SimulationEngine, create_brain
 
 app = typer.Typer(
@@ -17,7 +20,7 @@ console = Console()
 
 
 def create_demo_world() -> World:
-    """Create the initial V0.3 world."""
+    """Create the initial demo world."""
 
     world = World()
 
@@ -99,7 +102,6 @@ def create_demo_world() -> World:
             employer="Acme Systems",
         )
     )
-
     world.add_job(
         Job(
             id="job-data-cleaning",
@@ -111,7 +113,6 @@ def create_demo_world() -> World:
             employer="DataWorks",
         )
     )
-
     world.add_job(
         Job(
             id="job-fastapi-fix",
@@ -123,77 +124,71 @@ def create_demo_world() -> World:
             employer="CloudForge",
         )
     )
-
     return world
+
+
+def _print_opportunities(result: object) -> None:
+    """Print a compact discovery report."""
+    for index, opportunity in enumerate(result.opportunities, start=1):
+        console.print(
+            f"\n[bold cyan]#{index} — {opportunity.problem}[/bold cyan] "
+            f"[bold]score={opportunity.score:.0f}/100[/bold]"
+        )
+        console.print(f"  Customer: {opportunity.target_user}")
+        console.print(f"  Solution: {opportunity.solution}")
+        console.print(f"  Why now: {opportunity.why_now}")
+        for evidence in opportunity.evidence:
+            console.print(f"  Evidence: {evidence}")
+        for url in opportunity.source_urls:
+            console.print(f"  Reddit: {url}")
+        for evidence in opportunity.research:
+            console.print(f"  Research: {evidence}")
 
 
 @app.command()
 def simulate(
-    ticks: int = typer.Option(
-        5,
-        "--ticks",
-        "-t",
-        min=1,
-        help="Number of simulation ticks.",
-    ),
+    ticks: int = typer.Option(5, "--ticks", "-t", min=1, help="Number of simulation ticks."),
     brain: str | None = typer.Option(
         None,
         "--brain",
-        help="Brain implementation to use. Available: rule",
+        help="Brain implementation to use. Available: rule, rule-llm, nvidia, gemini, groq, mistral",
     ),
 ) -> None:
     """Run a Nexora simulation."""
-
     world = create_demo_world()
-
     selected_brain = None
-
     if brain is not None:
         try:
             selected_brain = create_brain(brain)
         except ValueError as exc:
             raise typer.BadParameter(str(exc)) from exc
 
-    engine = SimulationEngine(
-        world,
-        brain=selected_brain,
-    )
-
+    engine = SimulationEngine(world, brain=selected_brain)
     version_label = (
         "NEXORA V0.6.2 — Rule Brain" if brain == "rule" else "NEXORA V0.6.2 — Legacy Brain"
     )
-
     console.print(
         Panel.fit(
             f"[bold]{version_label}[/bold]\nAutonomous Internet Society",
             border_style="cyan",
         )
     )
-
     console.print("\n[bold]NPCs:[/bold]")
-
     for agent in world.agents.values():
-        npc = agent.npc
-        console.print(f"  • {npc.name} — {npc.occupation}")
-
+        console.print(f"  • {agent.npc.name} — {agent.npc.occupation}")
     console.print("\n[bold]Available jobs:[/bold]")
-
     for job in world.job_board.available():
         console.print(f"  • {job.title} — ₹{job.payment:.2f}")
 
     for tick in range(ticks):
         current_day = world.day
         current_hour = world.hour
-
         results = engine.tick()
-
         console.print(
             f"\n[bold cyan]Tick {tick + 1}[/bold cyan] — Day {current_day}, {current_hour:02d}:00"
         )
-
         for result in results:
             npc = world.get_npc(result.npc_id)
-
             console.print(f"\n[bold]{npc.name}[/bold]")
             console.print(f"  Money: ₹{npc.money:.2f}")
             console.print(f"  Reputation: {npc.reputation:.2f}")
@@ -201,45 +196,103 @@ def simulate(
             console.print(f"  Utility: {result.decision.score:.2f}")
             console.print(f"  Reason: {result.decision.reason}")
             console.print(f"  Result: {result.result.message}")
-
             for goal in npc.goals:
                 status = "completed" if goal.completed else "active"
-
                 if goal.target_amount is not None:
                     console.print(
-                        f"  Goal: {goal.description} "
-                        f"({goal.progress:.0f}/"
-                        f"{goal.target_amount:.0f}) "
+                        f"  Goal: {goal.description} ({goal.progress:.0f}/{goal.target_amount:.0f}) "
                         f"[{status}]"
                     )
-
         console.print("\n[bold magenta]Social activity:[/bold magenta]")
-
         for message in world.social.history:
             if message.tick == world.tick_count:
                 console.print(f"  {message.sender_id} → {message.recipient_id}: {message.content}")
-
         console.print("\n[bold yellow]Relationships:[/bold yellow]")
-
         for relationship in world.social.relationships.values():
             console.print(
-                f"  {relationship.source_id} → "
-                f"{relationship.target_id} "
-                f"trust={relationship.trust:.2f} "
-                f"familiarity={relationship.familiarity:.2f}"
+                f"  {relationship.source_id} → {relationship.target_id} "
+                f"trust={relationship.trust:.2f} familiarity={relationship.familiarity:.2f}"
+            )
+
+
+@app.command()
+def discover(
+    subreddit: str = typer.Option("startups", "--subreddit", "-s"),
+    posts: int = typer.Option(8, "--posts", "-p", min=1, max=25),
+    research: bool = typer.Option(True, "--research/--no-research"),
+) -> None:
+    """Watch Reddit, discover pain points, and validate startup opportunities."""
+    console.print(
+        Panel.fit(
+            "[bold]NEXORA — Reddit Opportunity Agent[/bold]\n"
+            "Reddit → pain points → opportunities → web validation",
+            border_style="green",
+        )
+    )
+    try:
+        reddit_posts = RedditRSSClient().hot(subreddit, limit=posts)
+        result = create_discovery_agent(research=research).discover(
+            subreddit,
+            reddit_posts,
+            research=research,
+        )
+    except (RuntimeError, ValueError) as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    console.print(f"\n[bold]Observed {len(result.posts)} posts from r/{subreddit}[/bold]")
+    _print_opportunities(result)
+
+
+@app.command("simulate-reddit")
+def simulate_reddit(
+    subreddit: str = typer.Option("startups", "--subreddit", "-s"),
+    posts: int = typer.Option(8, "--posts", "-p", min=1, max=25),
+    ticks: int = typer.Option(2, "--ticks", "-t", min=1, max=10),
+    brain: str = typer.Option("groq", "--brain"),
+    research: bool = typer.Option(True, "--research/--no-research"),
+) -> None:
+    """Discover Reddit opportunities, then let NPC agents compete over them."""
+    reddit_posts = RedditRSSClient().hot(subreddit, limit=posts)
+    discovery = create_discovery_agent(research=research).discover(
+        subreddit,
+        reddit_posts,
+        research=research,
+    )
+    _print_opportunities(discovery)
+
+    world = build_opportunity_world(discovery.opportunities)
+    try:
+        selected_brain = create_brain(brain)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    engine = SimulationEngine(world, brain=selected_brain)
+
+    console.print(
+        Panel.fit(
+            f"[bold]NEXORA — Reddit Simulation ({brain})[/bold]\n"
+            "Discovered opportunities are now simulated as competing jobs.",
+            border_style="cyan",
+        )
+    )
+    for tick in range(ticks):
+        results = engine.tick()
+        console.print(f"\n[bold cyan]Tick {tick + 1}[/bold cyan]")
+        for result in results:
+            npc = world.get_npc(result.npc_id)
+            console.print(
+                f"  {npc.name}: {result.decision.action} "
+                f"→ {result.decision.target_id or '-'} | {result.decision.reason}"
             )
 
 
 @app.command()
 def version() -> None:
     """Show the Nexora version."""
-
     console.print("Nexora 0.6.2")
 
 
 def main() -> None:
     """CLI entry point."""
-
     load_environment()
     app()
 
