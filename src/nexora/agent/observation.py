@@ -48,8 +48,7 @@ class ObservationBuilder:
         )
         available_jobs = tuple(job.id for job in suitable_jobs)
         available_job_scores = tuple(
-            (job.id, self._job_score(job.payment, job.difficulty.value))
-            for job in suitable_jobs
+            (job.id, self._job_score(job.payment, job.difficulty.value)) for job in suitable_jobs
         )
 
         available_actions = self._available_actions(
