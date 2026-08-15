@@ -173,10 +173,7 @@ def simulate(
         current_day = world.day
         current_hour = world.hour
         results = engine.tick()
-        console.print(
-            f"\n[bold cyan]Tick {tick + 1}[/bold cyan] — "
-            f"Day {current_day}, {current_hour:02d}:00"
-        )
+        console.print(f"\n[bold cyan]Tick {tick + 1}[/bold cyan] — Day {current_day}, {current_hour:02d}:00")
         for result in results:
             npc = world.get_npc(result.npc_id)
             console.print(f"\n[bold]{npc.name}[/bold]")
