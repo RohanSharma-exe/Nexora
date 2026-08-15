@@ -19,6 +19,7 @@ def test_mock_provider_returns_structured_action() -> None:
         LLMAction(
             action=ActionType.COMPLETE_JOB,
             target_id="job-1",
+            content=None,
             reasoning="The job advances the active goal.",
         )
     )

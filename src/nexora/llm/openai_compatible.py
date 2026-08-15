@@ -35,6 +35,7 @@ class OpenAICompatibleLLMProvider(LLMProvider):
                 {"role": "user", "content": build_decision_prompt(observation)},
             ],
             temperature=0,
+            max_completion_tokens=512,
             response_format={
                 "type": "json_schema",
                 "json_schema": {

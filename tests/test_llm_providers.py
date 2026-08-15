@@ -9,7 +9,6 @@ from nexora.llm.nvidia_provider import NVIDIAProvider
 from nexora.llm.tavily import TavilyResearchTool
 from nexora.models.runtime import ActionType, Observation
 
-
 OBSERVATION = Observation(
     subject_id="alice",
     tick=1,
@@ -106,7 +105,11 @@ def test_tavily_research_tool_returns_results() -> None:
         (TavilyResearchTool, "TAVILY_API_KEY"),
     ],
 )
-def test_provider_requires_api_key(provider: object, environment_variable: str, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_provider_requires_api_key(
+    provider: object,
+    environment_variable: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.delenv(environment_variable, raising=False)
 
     with pytest.raises(ValueError, match="not configured"):
