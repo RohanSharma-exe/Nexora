@@ -34,7 +34,7 @@ class MistralProvider(LLMProvider):
     def decide(self, observation: Observation) -> ActionIntent:
         """Generate and validate one structured NPC action."""
 
-        response = self.client.chat.complete(
+        response = self.client.chat.parse(
             model=self.model,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
