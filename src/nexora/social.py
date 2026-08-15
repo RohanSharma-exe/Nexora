@@ -6,6 +6,7 @@ from nexora.models.conversation import (
     ConversationMessage,
     MessageIntent,
 )
+from nexora.models.npc import NPC
 from nexora.models.relationship import Relationship
 
 
@@ -36,12 +37,23 @@ class SocialSystem:
     )
 
     _next_message_id: int = 1
+    _npc_registry: dict[str, NPC] = field(
+        default_factory=dict,
+    )
 
-    def register_npc(self, npc_id: str) -> None:
-        """Register an NPC."""
+    def register_npc(
+        self,
+        npc: NPC | str,
+    ) -> None:
+        """Register an NPC or NPC identifier."""
+
+        npc_id = npc.id if isinstance(npc, NPC) else npc
 
         if npc_id not in self.inboxes:
             self.inboxes[npc_id] = []
+
+        if isinstance(npc, NPC):
+            self._npc_registry[npc_id] = npc
 
     def get_relationship(
         self,
@@ -96,6 +108,23 @@ class SocialSystem:
         relationship.adjust_familiarity(familiarity_delta)
 
         return relationship
+
+    def adjust_reputation(
+        self,
+        npc_id: str,
+        delta: float,
+    ) -> None:
+        """Adjust an NPC's reputation while keeping it within bounds."""
+
+        npc = self._npc_registry.get(npc_id)
+
+        if npc is None:
+            raise KeyError(f"Unknown NPC: {npc_id}")
+
+        npc.reputation = min(
+            1.0,
+            max(0.0, npc.reputation + delta),
+        )
 
     def can_message(
         self,
@@ -252,13 +281,30 @@ class SocialSystem:
         return sorted(
             contacts,
             key=lambda contact: (
-                -self.relationship_score(
-                    npc_id,
-                    contact,
+                -(
+                    self.relationship_score(
+                        npc_id,
+                        contact,
+                    )
+                    * 0.7
+                    + self.reputation_score(contact) * 0.3
                 ),
                 contact,
             ),
         )
+
+    def reputation_score(
+        self,
+        npc_id: str,
+    ) -> float:
+        """Return an NPC's reputation score."""
+
+        npc = self._npc_registry.get(npc_id)
+
+        if npc is None:
+            return 0.5
+
+        return npc.reputation
 
     def unread_count(
         self,
@@ -287,9 +333,13 @@ class SocialSystem:
         ranked = sorted(
             candidates,
             key=lambda candidate: (
-                -self.relationship_score(
-                    npc_id,
-                    candidate,
+                -(
+                    self.relationship_score(
+                        npc_id,
+                        candidate,
+                    )
+                    * 0.7
+                    + self.reputation_score(candidate) * 0.3
                 ),
                 candidate,
             ),

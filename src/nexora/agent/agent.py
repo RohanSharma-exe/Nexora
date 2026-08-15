@@ -83,43 +83,41 @@ class Agent:
         message: ConversationMessage,
         response: ConversationResponse,
     ) -> None:
-        """Update the sender's relationship based on the response."""
+        """Update relationships and reputation based on an interaction."""
 
-        if message.intent == MessageIntent.REQUEST:
-            if response.intent == MessageIntent.OFFER:
-                self.social.apply_relationship_outcome(
-                    source_id=message.sender_id,
-                    target_id=self.npc.id,
-                    trust_delta=0.08,
-                    respect_delta=0.05,
-                    familiarity_delta=0.02,
-                )
-                return
-
-            if response.intent == MessageIntent.REPLY:
-                self.social.apply_relationship_outcome(
-                    source_id=message.sender_id,
-                    target_id=self.npc.id,
-                    trust_delta=-0.04,
-                    familiarity_delta=0.02,
-                )
-                return
-
-        if message.intent == MessageIntent.THANKS:
+        if response.intent == MessageIntent.OFFER:
             self.social.apply_relationship_outcome(
                 source_id=message.sender_id,
                 target_id=self.npc.id,
-                trust_delta=0.03,
-                respect_delta=0.02,
+                trust_delta=0.08,
+                respect_delta=0.05,
                 familiarity_delta=0.02,
             )
+
+            self.social.adjust_reputation(
+                npc_id=self.npc.id,
+                delta=0.05,
+            )
+
             return
 
-        self.social.apply_relationship_outcome(
-            source_id=message.sender_id,
-            target_id=self.npc.id,
-            familiarity_delta=0.01,
-        )
+        if response.intent == MessageIntent.REPLY:
+            self.social.apply_relationship_outcome(
+                source_id=message.sender_id,
+                target_id=self.npc.id,
+                familiarity_delta=0.02,
+            )
+
+            return
+
+        if response.intent == MessageIntent.GREETING:
+            self.social.apply_relationship_outcome(
+                source_id=message.sender_id,
+                target_id=self.npc.id,
+                familiarity_delta=0.02,
+            )
+
+            return
 
     def process_message(
         self,

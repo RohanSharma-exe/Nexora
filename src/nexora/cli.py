@@ -174,6 +174,7 @@ def simulate(
 
             console.print(f"\n[bold]{npc.name}[/bold]")
             console.print(f"  Money: ₹{npc.money:.2f}")
+            console.print(f"  Reputation: {npc.reputation:.2f}")
             console.print(f"  Decision: {result.decision.action}")
             console.print(f"  Utility: {result.decision.score:.2f}")
             console.print(f"  Reason: {result.decision.reason}")

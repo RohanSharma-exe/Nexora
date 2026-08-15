@@ -36,7 +36,7 @@ class World:
         if npc.id in self.agents:
             raise ValueError(f"NPC already exists: {npc.id}")
 
-        self.social.register_npc(npc.id)
+        self.social.register_npc(npc)
 
         self.agents[npc.id] = Agent(
             npc=npc,

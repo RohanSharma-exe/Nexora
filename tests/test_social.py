@@ -1,3 +1,4 @@
+from nexora.models.npc import NPC
 from nexora.social import SocialSystem
 
 
@@ -218,3 +219,102 @@ def test_relationship_values_are_clamped() -> None:
     assert relationship.trust == 0.0
     assert relationship.respect == 0.0
     assert relationship.familiarity == 0.0
+
+
+def test_ranked_contacts_consider_reputation() -> None:
+    social = SocialSystem()
+
+    alice = NPC(
+        id="alice",
+        name="Alice",
+        occupation="Developer",
+    )
+
+    bob = NPC(
+        id="bob",
+        name="Bob",
+        occupation="Developer",
+        reputation=0.9,
+    )
+
+    charlie = NPC(
+        id="charlie",
+        name="Charlie",
+        occupation="Developer",
+        reputation=0.1,
+    )
+
+    social.register_npc(alice)
+    social.register_npc(bob)
+    social.register_npc(charlie)
+
+    social.send_message(
+        sender_id="alice",
+        recipient_id="bob",
+        content="Hello Bob",
+        tick=1,
+    )
+
+    social.send_message(
+        sender_id="alice",
+        recipient_id="charlie",
+        content="Hello Charlie",
+        tick=1,
+    )
+
+    ranked = social.ranked_contacts("alice")
+
+    assert ranked[0] == "bob"
+
+
+def test_suggest_contact_considers_reputation() -> None:
+    social = SocialSystem()
+
+    alice = NPC(
+        id="alice",
+        name="Alice",
+        occupation="Developer",
+    )
+
+    bob = NPC(
+        id="bob",
+        name="Bob",
+        occupation="Developer",
+        reputation=0.9,
+    )
+
+    charlie = NPC(
+        id="charlie",
+        name="Charlie",
+        occupation="Developer",
+        reputation=0.1,
+    )
+
+    social.register_npc(alice)
+    social.register_npc(bob)
+    social.register_npc(charlie)
+
+    assert social.suggest_contact("alice") == "bob"
+
+
+def test_neutral_relationship_outcome_does_not_change_trust() -> None:
+    social = SocialSystem()
+
+    social.register_npc("alice")
+    social.register_npc("bob")
+
+    relationship = social.get_relationship(
+        "alice",
+        "bob",
+    )
+
+    before_trust = relationship.trust
+
+    social.apply_relationship_outcome(
+        source_id="alice",
+        target_id="bob",
+        familiarity_delta=0.02,
+    )
+
+    assert relationship.trust == before_trust
+    assert relationship.familiarity > 0.0
