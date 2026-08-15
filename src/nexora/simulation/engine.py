@@ -81,6 +81,4 @@ def create_brain(name: str) -> Brain:
         return LLMBrain(MistralProvider())
 
     supported = "rule, rule-llm, nvidia, gemini, groq, mistral"
-    raise ValueError(
-        f"Unknown brain '{name}'. Supported brains: {supported}"
-    )
+    raise ValueError(f"Unknown brain '{name}'. Supported brains: {supported}")
