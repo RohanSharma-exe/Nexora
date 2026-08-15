@@ -31,6 +31,8 @@ class Job(BaseModel):
 
     difficulty: JobDifficulty = JobDifficulty.MEDIUM
 
+    risk: float = Field(default=0.5, ge=0.0, le=1.0)
+
     status: JobStatus = JobStatus.OPEN
 
     employer: str = "system"
@@ -41,5 +43,6 @@ class Job(BaseModel):
         available_skills = {skill.lower() for skill in skills}
 
         return all(
-            required_skill.lower() in available_skills for required_skill in self.required_skills
+            required_skill.lower() in available_skills
+            for required_skill in self.required_skills
         )
